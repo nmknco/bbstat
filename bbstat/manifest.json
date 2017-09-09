@@ -1,0 +1,27 @@
+{
+    "manifest_version":2,
+
+    "name": "bbstat",
+    "description": "baseball stats enhancement",
+    "version":"0.1",
+    
+    "browser_action": {
+        "default_icon": "pink.png",
+        "default_popup": "popup.html"
+    },
+
+    "content_scripts": [
+        {
+            "matches": ["<all_urls>"],
+            "js": [ "jquery-3.2.1.js",
+                    "contentscript.js"]
+        }
+    ],
+
+    "background": {
+        "scripts": [
+            "jquery-3.2.1.js",
+            "popup.js"
+        ]
+    }
+}
