@@ -7,7 +7,7 @@
 import json
 import csv
 
-EARLIEST_YEAR = 1990
+EARLIEST_YEAR = 1900
 
 with open('people.csv', 'r') as f:
     data = csv.reader(f)
@@ -37,10 +37,29 @@ with open('people.csv', 'r') as f:
             continue
 
         last_name = row[col_nums[3]]
+        first_name = row[col_nums[4]]
+        suffix = row[col_nums[6]]
+        if suffix != "": print(suffix)
+
+        # There's a complication where names like "de la Rosa" are also
+        #   written as "De La Rosa". To handle these cases more easily
+        #   we use ALL-UPPERCASE last name as keys
+        last_name = last_name.upper()
+        # include suffix as part of the last name
+        # we still keep copy of original last name and suffix in dict items
+        if suffix != "":
+            if suffix[-1] == '.':
+                suffix = suffix[:-1] # remove '.' at the end
+            last_name += " " + suffix.upper()
+
+        # For similar reasons we also make first names all-upper
 
         dp = {} # player record
         for col_num, col_name in cols:
             dp[col_name] = row[col_num]
+        dp["name_first"] = first_name.upper()
+        dp["name_suffix"] = suffix.upper()
+
         if last_name not in d:
             d[last_name] = [dp]
         else:
@@ -49,8 +68,18 @@ with open('people.csv', 'r') as f:
         # cnt_ctrl += 1
         # if cnt_ctrl >= 10: break
 
-    # print len(d)
-    # print d['Jeter']
+    print(len(d))
+    # print([(k, d[k]) for k in list(d.keys())[:10]])
+
+    # print(d["DE LA ROSA"]) 
+    # print(d["O'DAY"])
+    print(d["GRIFFEY JR"])
+
+    # # print all last name without a cap at the beginning
+    # # not working when using all capitalized keys
+    # for k in d.keys():
+    #     if k[0] < "A" or k[0] > "Z":
+    #         print(k)
 
 with open('people.json', 'w') as f:
     f.write(json.dumps(d))
