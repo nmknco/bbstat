@@ -39,7 +39,7 @@ with open('people.csv', 'r') as f:
         last_name = row[col_nums[3]]
         first_name = row[col_nums[4]]
         suffix = row[col_nums[6]]
-        if suffix != "": print(suffix)
+        # if suffix != "": print(suffix)
 
         # There's a complication where names like "de la Rosa" are also
         #   written as "De La Rosa". To handle these cases more easily
@@ -52,13 +52,12 @@ with open('people.csv', 'r') as f:
                 suffix = suffix[:-1] # remove '.' at the end
             last_name += " " + suffix.upper()
 
-        # For similar reasons we also make first names all-upper
+        # first name is kept in the data in original form
+        #  only converted to uppercase when doing matching
 
         dp = {} # player record
         for col_num, col_name in cols:
             dp[col_name] = row[col_num]
-        dp["name_first"] = first_name.upper()
-        dp["name_suffix"] = suffix.upper()
 
         if last_name not in d:
             d[last_name] = [dp]
@@ -74,6 +73,7 @@ with open('people.csv', 'r') as f:
     # print(d["DE LA ROSA"]) 
     # print(d["O'DAY"])
     print(d["GRIFFEY JR"])
+    print([dp["name_first"] for dp in d["LOPEZ"]])
 
     # # print all last name without a cap at the beginning
     # # not working when using all capitalized keys

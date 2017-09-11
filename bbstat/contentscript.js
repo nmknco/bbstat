@@ -6,11 +6,13 @@ var dictURL = chrome.runtime.getURL("data/people.json");
 var latinDict = loadLatinDict();
 
 xhr.onload = function() {
-    console.log("name dictionary loaded - response status: %d",
-            xhr.status);
-    console.log("response length: %d", xhr.responseText.length);
-    nameDict = JSON.parse(xhr.responseText);
-    mainfunc();
+    if (xhr.status == 200) {
+        console.log("name dictionary loaded - response status: %d",
+                xhr.status);
+        console.log("response length: %d", xhr.responseText.length);
+        nameDict = JSON.parse(xhr.responseText);
+        mainfunc();
+    }
 }
 
 xhr.open("GET", dictURL, true);
@@ -58,6 +60,10 @@ function trimTail(word) {
         i++;
     }
     return word.slice(0,i);
+}
+
+function preProcAll(word, dict) {
+    return trimTail(trimHead(toEnglish(word, dict)));
 }
 
 function isCap(word) {
@@ -117,34 +123,29 @@ function doSomethingInner(node) {
             //      don't need to deal with ALL CAP texts separately
 
             var lastName = ord.toUpperCase(); // normal case
+            
             // handle exceptions with multi-word last name
-            // var longName = false; // if the potential last name has multi words
             var preLen = 1; // length of components up to ord (so suffix doesn't count)
                             //  it's used as offset from ord in looking for first name
-            // de Jesus
             if (i > 0) {
-                var pre1 = splits[i-1].toUpperCase();
-                if (pre1 == "DE" || pre1 == "DEN" || pre1 == "VAN") {
-                    lastName = pre1 + " " + ord;
-                    // longName = true;
+                var pre1 = preProcAll(splits[i-1], latinDict).toUpperCase();
+                // Griffey Jr.
+                if (lastName == "JR" || lastName == "SR" || lastName == "III") {
+                    lastName = pre1 + " " + lastName;
                     preLen = 2;
                 }
-            }
-            // de la Rosa
-            if (i > 1) {
-                var pre2 = splits[i-2].toUpperCase();
-                if (pre2 == "DE" || pre2 == "VAN") {
-                    lastName = pre2 + " " + pre1 + " " + ord;
-                    // longName = true;
-                    preLen = 3;
+                // den Dekker
+                else if (pre1 == "DE" || pre1 == "DEN" || pre1 == "VAN") {
+                    lastName = pre1 + " " + lastName;
+                    preLen = 2;
                 }
-            }
-            // Griffey Jr.
-            if (i < splits.length-1) {
-                nextU = next.toUpperCase();
-                if (nextU == "JR" || nextU == "SR" || nextU == "III") {
-                    lastName = lastName + " " + nextU;
-                    // longName = true;
+                // de la Rosa
+                else if (i > 1) {
+                    var pre2 = preProcAll(splits[i-2], latinDict).toUpperCase();
+                    if (pre2 == "DE" || pre2 == "VAN") {
+                        lastName = pre2 + " " + pre1 + " " + lastName;
+                        preLen = 3;
+                    }
                 }
             }
 
@@ -185,9 +186,10 @@ function doSomethingInner(node) {
                         var players = nameDict[lastName];
                         var matches = []; // index of the matches
                         for (var j = 0; j < players.length; j++) {
-                            var firstName = players[j]["name_first"];
+                            prev = prev.toUpperCase();
+                            var firstName = players[j]["name_first"].toUpperCase();
                             var fnInit = firstName.charAt(0) + "."
-                            if (prev.toUpperCase() == firstName || initial == fnInit)
+                            if (prev == firstName || initial == fnInit)
                                 matches.push(j);
                         }
                         if (matches.length == 0) continue;
