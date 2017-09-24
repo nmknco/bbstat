@@ -1,9 +1,24 @@
 console.log("contentscript executed");
 
+$(document).ready(function(){
+    var styleEl = document.createElement("style");
+    document.head.appendChild(styleEl);
+
+    var rule = "._player_popup { ";
+    rule += "position: absolute;";
+    rule += "background-color: #f2f2e5;"; 
+    rule += "border: 1px solid #000000;";
+    rule += "margin: 10px; padding: 10px;";
+    // rule += "width: 150px; height: 150px;";
+    rule += " }";
+    styleEl.sheet.insertRule(rule, 0);
+});
+
 var nameDict
 var xhr = new XMLHttpRequest();
 var dictURL = chrome.runtime.getURL("data/people.json");
 var latinDict = loadLatinDict();
+var localDict = {};
 
 xhr.onload = function() {
     if (xhr.status == 200) {
@@ -24,11 +39,43 @@ function mainfunc() {
         function(message, sender, sendResponse) {
             console.log("woohoo!");
             console.log("Received Message: " + message.message);
-            doSomething();
-            // doSomething2()
-            sendResponse();
+            if (message.message == "activate")
+                activate();
+            else if (message.message == "deactivate")
+                deactivate();
+            sendResponse({status: 0});
         }
     );
+}
+
+function loadLatinDict() {
+    console.log("Loading Latin dict");
+    var latinDict = {
+        "á" : "a",
+        "é" : "e", 
+        "í" : "i", 
+        "ó" : "o", 
+        "ú" : "u", 
+        "ñ" : "n", 
+        "ü" : "u",
+        "Á" : "A",
+        "É" : "E",
+        "Í" : "I",
+        "Ñ" : "N",
+        "Ó" : "O",
+        "Ú" : "U",
+        "Ü" : "U"
+    }
+    return latinDict;
+}
+
+function toEnglish(word, dict) {
+    var newword = ""
+    for (var i = 0; i < word.length; i++) {
+        c = word.charAt(i);
+        newword += (c in dict) ? dict[c] : c;
+    }
+    return newword;
 }
 
 function trimHead(word) {
@@ -72,14 +119,24 @@ function isCap(word) {
     return (c0 >= "A" && c0 <= "Z");
 }
 
-function doSomethingInner(node) {
+function activateInner(node) {
     // console.log("doing something INNER with...");
     // console.log(node);
     // console.log(node.childNodes);
+    var skip = 0;
+
     if (node.nodeType == 3) {
+        // gloabl skip for newly added elements
+        // New node will be a collection of textnodes and elements
+        // current node is to be replaced with all nodes in newNodes
+        var currentTextArray = [];
+        var newNodes = [];
+        var isFirstText = true; // if we are at the first text node
+
         // To do: quickly skip empty/blank text nodes
         var splits = node.data.split(/[\s]+/);
         if (splits.length == 0) return;
+
         var next = trimTail(trimHead(
                 toEnglish(splits[0], latinDict))); // always trimmed
         var isNextCap = isCap(next);
@@ -87,6 +144,8 @@ function doSomethingInner(node) {
         for (var i = 0; i < splits.length; i++) {
             // console.log(next);
             var word = splits[i];
+            currentTextArray.push(word);
+
             var ord = next;
             var isCurrentCap = isNextCap;
 
@@ -102,8 +161,9 @@ function doSomethingInner(node) {
                 }
             }
             // now that next is recorded, check if current is capped
-            if (!isCurrentCap && ord != "deGrom" && ord != "d'Arnaud")
+            if (!isCurrentCap && ord != "deGrom" && ord != "d'Arnaud") {
                 continue;
+            }
             // exceptions
             // Handled here: deGrom | d'Arnaud
             // Handled later: van Xx | van den Xxx | de Xxx | de la Xxx | den Xxx
@@ -190,22 +250,54 @@ function doSomethingInner(node) {
                             var firstName = players[j]["name_first"].toUpperCase();
                             var fnInit = firstName.charAt(0) + "."
                             if (prev == firstName || initial == fnInit)
-                                matches.push(j);
+                                matches.push(players[j]);
                         }
                         if (matches.length == 0) continue;
-                        else if (matches.length == 1) {
-                            splits[i] = word + " (PLAYER - ";
-                            splits[i] += players[matches[0]]["key_mlbam"];
-                            splits[i] += ")";
+                        else if (matches.length >= 1) {
+                            // when > 1 for now use the most recent match
+                            if (matches.length > 1) {
+                                for (var k = 1; k < matches.length; k++) {
+                                    if (matches[k]["mlb_played_last"] > matches[0]["mlb_player_last"]) {
+                                        matches[0] = matches[k];
+                                    }
+                                }
+                            }
 
+                            // write local dict
+                            var player = matches[0];
+                            localDict[player["key_mlbam"]] = player;
+
+                            // add the texts before last name to new nodes
+                            var currentText = currentTextArray.slice(0, -preLen).join(" ");
+                            var currentText = currentText + " ";
+                            if (isFirstText) {
+                                isFirstText = false;
+                            } else {
+                                currentText = " " + currentText;
+                            }
+                            newNodes.push(document.createTextNode(currentText));
+                            
+                           
+                            // add an element node for the found player
+                            var playerNode = document.createElement("mark");
+                            playerNode.className = "_player_node";
+                            
+                            playerNode.id = player["key_mlbam"] + "_" + player["key_bbref"];
+                            // wrap the last name as appeared in original text
+                            var orgLastName = currentTextArray.slice(-preLen).join(" ");
+                            playerNode.appendChild(
+                                    document.createTextNode(orgLastName));
+                            newNodes.push(playerNode);
+
+                            currentTextArray = [];
                         }
-                        else {
-                            // multiple matches
-                            // disambiguate
-                            // 2. year
-                            // 3. team
-                            splits[i] = word + " (PLAYER - multi)";
-                        }
+                        // else {
+                        //     // multiple matches
+                        //     // disambiguate
+                        //     // 2. year
+                        //     // 3. team
+                        //     splits[i] = word + " (multi match)";
+                        // }
                     }
                     else {
                         // no first name BEFORE, now
@@ -216,53 +308,122 @@ function doSomethingInner(node) {
                     }
                 }
             }
+            else {
+                // name not in namedict
+            }
         }
-        var newText = splits.join(" ");
-        node.data = newText; // bad practice?
+        // var newText = splits.join(" ");
+        // node.nodeValue = newText; // bad practice?
+
+        // Now we are going to mutate dom tree, and will be replacing one node
+        //      with multiple node, and this causes unwanted behavior when
+        //      iterating through parent.childNodes recursively - the iteration
+        //      will reflect the change each time
+        // Two solutions
+        //      1. copy childNodes (a NodeList obj) into an array first
+        //          so that we can iterate through the original elements
+        //          safely
+        //      2. Explicitly tell the iteration to skip a certain amount
+        //          of node
+
+        // push the last batch of texts, and then replace the node
+        newNodes.push(document.createTextNode(" " + currentTextArray.join(" ")));
+        var prt = node.parentNode;
+        for (var i = 0; i < newNodes.length; i++) {
+            prt.insertBefore(newNodes[i], node);
+        }
+        node.remove();
+
+        skip = newNodes.length - 1;
     }
+
     else if (node.nodeType == 1 && node.childNodes && 
             !/(script|style)/i.test(node.tagName)) {
         var chnds = node.childNodes;
         for (var i = 0; i < chnds.length; i++) {
-            doSomethingInner(chnds[i]);
+            i += activateInner(chnds[i]); // replace and skip all newly added
         }
     }
+
+    return skip;
 }
 
-function doSomething() {
+function activate() {
     console.log("doing something...");
 
-    doSomethingInner(document.body);
+    activateInner(document.body);
 
+    // set up mouseover events
+    addPopup();
 }
 
+function deactivate() {
 
-function loadLatinDict() {
-    console.log("Loading Latin dict");
-    var latinDict = {
-        "á" : "a",
-        "é" : "e", 
-        "í" : "i", 
-        "ó" : "o", 
-        "ú" : "u", 
-        "ñ" : "n", 
-        "ü" : "u",
-        "Á" : "A",
-        "É" : "E",
-        "Í" : "I",
-        "Ñ" : "N",
-        "Ó" : "O",
-        "Ú" : "U",
-        "Ü" : "U"
+    // again we need to handle carefully as HTMLCollection of doms
+    //  mutated during iteration
+    // However if we use querySelectorAll() we get a non-live NodeList
+    //          (note: NodeList CAN be live, as in activateINNER() )
+    //  and can just iterate through
+
+    // var playerNodes = document.getElementsByClassName("_player_node");
+    // console.log(playerNodes);    // this returns HTMLCollection, live
+    var playerNodes = document.querySelectorAll("._player_node");
+    // console.log(playerNodes);       // this returns NodeList that is not live
+    for (var i = 0; i < playerNodes.length; i++) {
+        var node = playerNodes[i];
+        var prt = node.parentNode;
+        node.replaceWith(node.firstChild);
+        prt.normalize();
     }
-    return latinDict;
 }
 
-function toEnglish(word, dict) {
-    var newword = ""
-    for (var i = 0; i < word.length; i++) {
-        c = word.charAt(i);
-        newword += (c in dict) ? dict[c] : c;
+function addPopup() {
+    var playerNodes = document.querySelectorAll("._player_node");
+    for (var i = 0; i < playerNodes.length; i++) {
+        playerNodes[i].addEventListener("mouseover", function() { showPopup(this); }, false);
+        playerNodes[i].addEventListener("mouseout", function() { hidePopup(this); }, false);
     }
-    return newword;
 }
+
+function showPopup(node) {
+    // using jQuery for offest()
+
+    var popupID = "_popup_" + node.id;
+    var $popup = $("#" + popupID);
+    if ($popup.length) {
+        // update..?
+        // and show
+        $popup.show();
+    } else {
+        var $node = $(node);    // convert to jQuery object
+        var offset = $node.offset();
+        // console.log($node.offset());
+        var $popup = $("<div></div>")
+                .attr("id", popupID)
+                .attr("class", "_player_popup")
+                .css("left", offset.left)
+                .css("top", offset.top + 25);
+        var player = localDict[node.id.split("_")[0]];
+        $popup.text(player["name_first"] + " " + player["name_last"]);
+        $("body").append($popup);
+        $popup.hover(
+            function() {
+                // console.log(this);
+                $(this).show();
+            },
+            function() {
+                $(this).hide(); 
+            }
+        );
+    }
+}
+
+function hidePopup(node) {
+    var popupID = "_popup_" + node.id;
+    setTimeout(function() {
+        if(!($('#' + popupID + ":hover").length > 0)) {
+            $("#" + popupID).hide();
+        }
+    }, 200);
+}
+
