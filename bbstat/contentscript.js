@@ -20,7 +20,7 @@ $(document).ready(function(){
 
     rule = "._headshot { ";
     rule += "width: 60px;";
-    rule += "border: 2px solid white; border-radius: 5px; margin: 0px 5px 10px 5px";
+    rule += "border: 2px solid white; border-radius: 7px; margin: 0px 5px 5px 5px";
     rule += " }";
     styleEl.sheet.insertRule(rule, 0);
 
