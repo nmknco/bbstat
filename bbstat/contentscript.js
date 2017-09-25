@@ -6,12 +6,36 @@ $(document).ready(function(){
 
     var rule = "._player_popup { ";
     rule += "position: absolute;";
-    rule += "background-color: #f2f2e5;"; 
-    rule += "border: 1px solid #000000;";
-    rule += "margin: 10px; padding: 10px;";
-    // rule += "width: 150px; height: 150px;";
+    rule += "display: flex;";
+    rule += "background-color: #f8f8f8;"; 
+    // rule += "border: 1px solid #000000;";
+    rule += "margin: 10px; padding: 10px; border-radius: 10px;";
+    rule += "width: 240px;";
+    rule += "-webkit-box-shadow: 1px 1px 5px 0px rgba(50,50,50,0.75);";
+    rule += "-moz-box-shadow: 1px 1px 5px 0px rgba(50,50,50,0.75);";
+    rule += "box-shadow: 1px 1px 5px 0px rgba(50,50,50,0.75);";
+    rule += "font-family: \"Ariel\", sans-serif; font-size: 15px; text-align: left;";
     rule += " }";
     styleEl.sheet.insertRule(rule, 0);
+
+    rule = "._headshot { ";
+    rule += "width: 60px;";
+    rule += "border: 2px solid white; border-radius: 5px; margin: 0px 5px 10px 5px";
+    rule += " }";
+    styleEl.sheet.insertRule(rule, 0);
+
+    rule = "._headshot_div { width: 80px; height: 100px; }";
+    styleEl.sheet.insertRule(rule, 0);
+
+    rule = "._header_texts { width: 100%; }";
+    styleEl.sheet.insertRule(rule, 0);
+
+    rule = "._player_name { font-weight: bold; }";
+    styleEl.sheet.insertRule(rule, 0);
+
+    rule = "._player_popup a { color: black; }";
+    styleEl.sheet.insertRule(rule, 0);
+
 });
 
 var nameDict
@@ -390,21 +414,23 @@ function showPopup(node) {
 
     var popupID = "_popup_" + node.id;
     var $popup = $("#" + popupID);
+    var $node = $(node);    // convert to jQuery objectv
+    var $prt = $node.parent();
+    $prt.attr("title_org", $prt.attr("title")).removeAttr("title");
+
     if ($popup.length) {
         // update..?
         // and show
         $popup.show();
     } else {
-        var $node = $(node);    // convert to jQuery object
         var offset = $node.offset();
         // console.log($node.offset());
         var $popup = $("<div></div>")
                 .attr("id", popupID)
                 .attr("class", "_player_popup")
                 .css("left", offset.left)
-                .css("top", offset.top + 25);
-        var player = localDict[node.id.split("_")[0]];
-        $popup.text(player["name_first"] + " " + player["name_last"]);
+                .css("top", offset.top + 15);
+        fillPopup($popup, node.id);
         $("body").append($popup);
         $popup.hover(
             function() {
@@ -419,6 +445,10 @@ function showPopup(node) {
 }
 
 function hidePopup(node) {
+    var $node = $(node);
+    var $prt = $node.parent();
+    $prt.attr("title", $prt.attr("title_org")).removeAttr("title_org");
+
     var popupID = "_popup_" + node.id;
     setTimeout(function() {
         if(!($('#' + popupID + ":hover").length > 0)) {
@@ -427,3 +457,32 @@ function hidePopup(node) {
     }, 200);
 }
 
+function fillPopup($popup, id) {
+    var ids = id.split("_");
+    var key_mlbam = ids[0];
+    var key_bbref = ids[1];
+    var player = localDict[key_mlbam];
+
+
+
+    $popup.append($("<div></div>").addClass("_header_texts"));
+    var $headerText = $popup.find("._header_texts");
+    $headerText.append($("<div></div>")
+            .addClass("_player_name")
+            .text(player["name_first"] + " " + player["name_last"]));
+    $headerText.append($("<a></a>").text("Baseball Reference").attr(
+            "href", "https://www.baseball-reference.com/players/"
+                    + key_bbref.charAt() + "/" + key_bbref + ".shtml")
+            .attr("target", "_blank")
+    );
+    var stats = "2017: 301/469/572";
+    $headerText.append($("<div></div>").text(stats));
+
+    var headshot_mlb = "http://mlb.mlb.com/mlb/images/players/head_shot/";
+    headshot_mlb += key_mlbam + ".jpg";
+    $popup.append($("<div></div>")
+            .addClass("_headshot_div")
+            .append('<img class="_headshot" align="left" src ="' + headshot_mlb + '" />'));
+
+    return $popup;
+}
