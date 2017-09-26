@@ -416,7 +416,7 @@ function showPopup(node) {
     var $popup = $("#" + popupID);
     var $node = $(node);    // convert to jQuery objectv
     var $prt = $node.parent();
-    $prt.attr("title_org", $prt.attr("title")).removeAttr("title");
+    $prt.attr("data-title-org", $prt.attr("title")).removeAttr("title");
 
     if ($popup.length) {
         // update..?
@@ -425,7 +425,7 @@ function showPopup(node) {
     } else {
         var offset = $node.offset();
         // console.log($node.offset());
-        var $popup = $("<div></div>")
+        $popup = $("<div></div>")
                 .attr("id", popupID)
                 .attr("class", "_player_popup")
                 .css("left", offset.left)
@@ -441,13 +441,42 @@ function showPopup(node) {
                 $(this).hide(); 
             }
         );
+        // request statistics from API
+        // right now only request once on $popup create
+        var key_bbref = node.id.split("_")[1];
+        var xhr = new XMLHttpRequest();
+        var api_url = "https://localhost:2334/?key_bbref=" + key_bbref;
+
+        xhr.onload = function() {
+            handleDataInPopup(xhr, $popup);
+        }
+
+        xhr.open("GET", api_url, true);
+        xhr.send(null);
+    }
+}
+
+function handleDataInPopup(xhr, $popup) {
+    if (xhr.status == 200) {
+        console.log("%d: DATA API response received", xhr.status);
+        console.log("response length: %d", xhr.responseText.length);
+        var stats = JSON.parse(xhr.responseText.replace(/\'/g, "\""));
+        console.log(stats);
+
+        var recentrow = stats[stats.length-1];
+        if (recentrow.hasOwnProperty("AVG")) {
+            var slash = recentrow.Year + ": " + recentrow.AVG + "/";
+            slash += recentrow.OBP + "/" + recentrow.SLG;
+            console.log(slash);
+            $popup.find("._stats_div").text(slash);
+        }
     }
 }
 
 function hidePopup(node) {
     var $node = $(node);
     var $prt = $node.parent();
-    $prt.attr("title", $prt.attr("title_org")).removeAttr("title_org");
+    $prt.attr("title", $prt.attr("data-title-org")).removeAttr("data-title-org");
 
     var popupID = "_popup_" + node.id;
     setTimeout(function() {
@@ -475,8 +504,10 @@ function fillPopup($popup, id) {
                     + key_bbref.charAt() + "/" + key_bbref + ".shtml")
             .attr("target", "_blank")
     );
-    var stats = "2017: 301/469/572";
-    $headerText.append($("<div></div>").text(stats));
+    var stats = "";
+    $headerText.append($("<div></div>")
+                .attr("class", "_stats_div")
+                .text(stats));
 
     var headshot_mlb = "http://mlb.mlb.com/mlb/images/players/head_shot/";
     headshot_mlb += key_mlbam + ".jpg";

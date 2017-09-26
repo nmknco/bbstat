@@ -6,11 +6,12 @@
     "version":"0.1",
 
     "permissions": [
-        "storage" 
+        "storage",
+        "http://locahost:2334/*" 
     ],
     
     "browser_action": {
-        "default_icon": "pink.png",
+        "default_icon": "bb.png",
         "default_popup": "popup.html"
     },
 
