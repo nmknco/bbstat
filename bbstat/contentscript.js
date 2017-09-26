@@ -5,7 +5,7 @@ $(document).ready(function(){
     document.head.appendChild(styleEl);
 
     var rule = "._player_popup { ";
-    rule += "position: absolute;";
+    rule += "position: absolute; z-index: 100;";
     rule += "display: flex;";
     rule += "background-color: #f8f8f8;"; 
     // rule += "border: 1px solid #000000;";
