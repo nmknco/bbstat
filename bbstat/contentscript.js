@@ -1,48 +1,11 @@
 console.log("contentscript executed");
 
-$(document).ready(function(){
-    var styleEl = document.createElement("style");
-    document.head.appendChild(styleEl);
+var nameDict;
+var latinDict;
+var localDict;
 
-    var rule = "._player_popup { ";
-    rule += "position: absolute; z-index: 100;";
-    rule += "display: flex;";
-    rule += "background-color: #f8f8f8;"; 
-    // rule += "border: 1px solid #000000;";
-    rule += "margin: 10px; padding: 10px; border-radius: 10px;";
-    rule += "width: 240px;";
-    rule += "-webkit-box-shadow: 1px 1px 5px 0px rgba(50,50,50,0.75);";
-    rule += "-moz-box-shadow: 1px 1px 5px 0px rgba(50,50,50,0.75);";
-    rule += "box-shadow: 1px 1px 5px 0px rgba(50,50,50,0.75);";
-    rule += "font-family: \"Ariel\", sans-serif; font-size: 15px; text-align: left;";
-    rule += " }";
-    styleEl.sheet.insertRule(rule, 0);
-
-    rule = "._headshot { ";
-    rule += "width: 60px;";
-    rule += "border: 2px solid white; border-radius: 7px; margin: 0px 5px 5px 5px";
-    rule += " }";
-    styleEl.sheet.insertRule(rule, 0);
-
-    rule = "._headshot_div { width: 80px; height: 100px; }";
-    styleEl.sheet.insertRule(rule, 0);
-
-    rule = "._header_texts { width: 100%; }";
-    styleEl.sheet.insertRule(rule, 0);
-
-    rule = "._player_name { font-weight: bold; }";
-    styleEl.sheet.insertRule(rule, 0);
-
-    rule = "._player_popup a { color: black; }";
-    styleEl.sheet.insertRule(rule, 0);
-
-});
-
-var nameDict
 var xhr = new XMLHttpRequest();
 var dictURL = chrome.runtime.getURL("data/people.json");
-var latinDict = loadLatinDict();
-var localDict = {};
 
 xhr.onload = function() {
     if (xhr.status == 200) {
@@ -52,13 +15,16 @@ xhr.onload = function() {
         nameDict = JSON.parse(xhr.responseText);
         mainfunc();
     }
-}
+};
 
 xhr.open("GET", dictURL, true);
 xhr.send(null);
 
 // need to run below as a call back
-function mainfunc() {
+var mainfunc = function() {
+
+    latinDict = loadLatinDict();
+    localDict = {};
     chrome.runtime.onMessage.addListener(
         function(message, sender, sendResponse) {
             console.log("woohoo!");
@@ -70,9 +36,9 @@ function mainfunc() {
             sendResponse({status: 0});
         }
     );
-}
+};
 
-function loadLatinDict() {
+var loadLatinDict = function() {
     console.log("Loading Latin dict");
     var latinDict = {
         "á" : "a",
@@ -91,18 +57,18 @@ function loadLatinDict() {
         "Ü" : "U"
     }
     return latinDict;
-}
+};
 
-function toEnglish(word, dict) {
+var toEnglish = function(word, dict) {
     var newword = ""
     for (var i = 0; i < word.length; i++) {
         c = word.charAt(i);
         newword += (c in dict) ? dict[c] : c;
     }
     return newword;
-}
+};
 
-function trimHead(word) {
+var trimHead = function(word) {
     // assuming that all letters are English
     var i = 0;
     while (i < word.length) {
@@ -113,9 +79,9 @@ function trimHead(word) {
         i++;
     }
     return word.slice(i);
-}
+};
 
-function trimTail(word) {
+var trimTail = function(word) {
     // assuming that all letters are English
     // assuming the word start with letters
     var i = 0;
@@ -131,19 +97,19 @@ function trimTail(word) {
         i++;
     }
     return word.slice(0,i);
-}
+};
 
-function preProcAll(word, dict) {
+var preProcAll = function(word, dict) {
     return trimTail(trimHead(toEnglish(word, dict)));
-}
+};
 
-function isCap(word) {
+var isCap = function(word) {
     if (word == "") return false;
     var c0 = word.charAt(0);
     return (c0 >= "A" && c0 <= "Z");
-}
+};
 
-function activateInner(node) {
+var activateInner = function(node) {
     // console.log("doing something INNER with...");
     // console.log(node);
     // console.log(node.childNodes);
@@ -240,7 +206,7 @@ function activateInner(node) {
 
             // look for word in the name list
             if (lastName in nameDict) {
-                console.log("Potential last name: %s", lastName);
+                // console.log("Potential last name: %s", lastName);
                 if (i >= preLen) {
                     var prev = splits[i - preLen];
                     var prev = trimHead(toEnglish(prev, latinDict));
@@ -336,8 +302,6 @@ function activateInner(node) {
                 // name not in namedict
             }
         }
-        // var newText = splits.join(" ");
-        // node.nodeValue = newText; // bad practice?
 
         // Now we are going to mutate dom tree, and will be replacing one node
         //      with multiple node, and this causes unwanted behavior when
@@ -358,7 +322,8 @@ function activateInner(node) {
         }
         node.remove();
 
-        skip = newNodes.length - 1;
+        skip = newNodes.length - 1; // tells the recusive function call below
+                                    // to skip the newly created nodes
     }
 
     else if (node.nodeType == 1 && node.childNodes && 
@@ -370,18 +335,18 @@ function activateInner(node) {
     }
 
     return skip;
-}
+};
 
-function activate() {
+var activate = function() {
     console.log("doing something...");
 
     activateInner(document.body);
 
     // set up mouseover events
     addPopup();
-}
+};
 
-function deactivate() {
+var deactivate = function() {
 
     // again we need to handle carefully as HTMLCollection of doms
     //  mutated during iteration
@@ -399,17 +364,17 @@ function deactivate() {
         node.replaceWith(node.firstChild);
         prt.normalize();
     }
-}
+};
 
-function addPopup() {
+var addPopup = function() {
     var playerNodes = document.querySelectorAll("._player_node");
     for (var i = 0; i < playerNodes.length; i++) {
         playerNodes[i].addEventListener("mouseover", function() { showPopup(this); }, false);
         playerNodes[i].addEventListener("mouseout", function() { hidePopup(this); }, false);
     }
-}
+};
 
-function showPopup(node) {
+var showPopup = function(node) {
     // using jQuery for offest()
 
     var popupID = "_popup_" + node.id;
@@ -454,9 +419,9 @@ function showPopup(node) {
         xhr.open("GET", api_url, true);
         xhr.send(null);
     }
-}
+};
 
-function handleDataInPopup(xhr, $popup) {
+var handleDataInPopup = function(xhr, $popup) {
     if (xhr.status == 200) {
         console.log("%d: DATA API response received", xhr.status);
         console.log("response length: %d", xhr.responseText.length);
@@ -471,9 +436,9 @@ function handleDataInPopup(xhr, $popup) {
             $popup.find("._stats_div").text(slash);
         }
     }
-}
+};
 
-function hidePopup(node) {
+var hidePopup = function(node) {
     var $node = $(node);
     var $prt = $node.parent();
     $prt.attr("title", $prt.attr("data-title-org")).removeAttr("data-title-org");
@@ -484,9 +449,9 @@ function hidePopup(node) {
             $("#" + popupID).hide();
         }
     }, 200);
-}
+};
 
-function fillPopup($popup, id) {
+var fillPopup = function($popup, id) {
     var ids = id.split("_");
     var key_mlbam = ids[0];
     var key_bbref = ids[1];
@@ -516,4 +481,44 @@ function fillPopup($popup, id) {
             .append('<img class="_headshot" align="left" src ="' + headshot_mlb + '" />'));
 
     return $popup;
-}
+};
+
+var insertCSS = function(){
+    var styleEl = document.createElement("style");
+    document.head.appendChild(styleEl);
+
+    var rule = "._player_popup { ";
+    rule += "position: absolute; z-index: 100;";
+    rule += "display: flex;";
+    rule += "background-color: #f8f8f8;"; 
+    // rule += "border: 1px solid #000000;";
+    rule += "margin: 10px; padding: 10px; border-radius: 10px;";
+    rule += "width: 240px;";
+    rule += "-webkit-box-shadow: 1px 1px 5px 0px rgba(50,50,50,0.75);";
+    rule += "-moz-box-shadow: 1px 1px 5px 0px rgba(50,50,50,0.75);";
+    rule += "box-shadow: 1px 1px 5px 0px rgba(50,50,50,0.75);";
+    rule += "font-family: \"Ariel\", sans-serif; font-size: 15px; text-align: left;";
+    rule += " }";
+    styleEl.sheet.insertRule(rule, 0);
+
+    rule = "._headshot { ";
+    rule += "width: 60px;";
+    rule += "border: 2px solid white; border-radius: 7px; margin: 0px 5px 5px 5px";
+    rule += " }";
+    styleEl.sheet.insertRule(rule, 0);
+
+    rule = "._headshot_div { width: 80px; height: 100px; }";
+    styleEl.sheet.insertRule(rule, 0);
+
+    rule = "._header_texts { width: 100%; }";
+    styleEl.sheet.insertRule(rule, 0);
+
+    rule = "._player_name { font-weight: bold; }";
+    styleEl.sheet.insertRule(rule, 0);
+
+    rule = "._player_popup a { color: black; }";
+    styleEl.sheet.insertRule(rule, 0);
+
+};
+
+$(document).ready(insertCSS);

@@ -9,7 +9,6 @@ var datajs = require('./data')
 
 var app = express();
 var porthttps = 2334;
-var port = 2335
 var options = {
     key: fs.readFileSync('keys/client-key.pem'),
     cert: fs.readFileSync('keys/client-cert.pem')
@@ -30,8 +29,4 @@ app.get('/', function(req, res) {
 
 https.createServer(options, app).listen(porthttps, function() {
     console.log("Listening on %s...", porthttps);
-});
-
-https.createServer(options, app).listen(port, function() {
-    console.log("Listening on %s...", port);
 });
