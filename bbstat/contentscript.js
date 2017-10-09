@@ -4,21 +4,41 @@ var nameDict;
 var latinDict;
 var localDict; // local name-playerinfo dict
 var playerStats; // stores complete stats get from xhr response
+var playerSet; // store a hashset of players found (in concat ids)
 
 // need to run below as a call back
 var mainfunc = function() {
 
+    // The following variables are initialized once and 
+    //      changes persist through deactivation
     latinDict = loadLatinDict();
+    playerStats = {}; 
     localDict = {};
-    if (playerStats === undefined) playerStats = {}; // let it persist through deactivation?
+    // The following is initialized in each activation 
+    playerSet = {};
+
     chrome.runtime.onMessage.addListener(
         function(message, sender, sendResponse) {
-            console.log("Received Message: " + message.message);
-            if (message.message == "activate")
-                activate();
-            else if (message.message == "deactivate")
-                deactivate();
-            sendResponse({status: 0});
+            var msg = message.message;
+            var res_code; // response status/err code
+            var res_msg = ""
+            console.log("Received Message: " + msg);
+            if (msg == "activate") {
+                res_code = activate();
+                res_msg = "activateDONE";
+            }
+            else if (msg == "deactivate") {
+                res_code = deactivate();
+                res_msg = "deactivateDONE";
+            }
+            else if (msg == "getAll") {
+                res_code = requestAllPlayers(Object.keys(playerSet));
+                res_msg = "getAllDONE";
+            }
+            sendResponse({
+                status: res_code,
+                message: res_msg
+            });
         }
     );
 };
@@ -238,9 +258,16 @@ var activateInner = function(node) {
                                 }
                             }
 
-                            // write local dict
-                            var player = matches[0];
-                            localDict[player["key_mlbam"]] = player;
+
+                            // Now we found a player
+                            var player = matches[0]; // info object
+
+                            // update local dict and player set
+                            // local dict may already has the key from last activation 
+                            if (!localDict.hasOwnProperty(player["key_mlbam"]))
+                                localDict[player["key_mlbam"]] = player;
+                            var ids_concat = player["key_mlbam"] + "_" + player["key_bbref"];
+                            playerSet[ids_concat] = true;
 
                             // add the texts before last name to new nodes
                             var currentText = currentTextArray.slice(0, -preLen).join(" ");
@@ -257,7 +284,7 @@ var activateInner = function(node) {
                             var playerNode = document.createElement("mark");
                             playerNode.className = "_player_node";
                             
-                            playerNode.id = player["key_mlbam"] + "_" + player["key_bbref"];
+                            playerNode.id = ids_concat;
                             // wrap the last name as appeared in original text
                             var orgLastName = currentTextArray.slice(-preLen).join(" ");
                             playerNode.appendChild(
@@ -323,12 +350,20 @@ var activateInner = function(node) {
 };
 
 var activate = function() {
-    console.log("doing something...");
+
+    // We do a research each time extension is deactivated and reactivated
+    console.log("Searching for players...");
 
     activateInner(document.body);
+    console.log("Searched players:");
+    console.log(playerSet);
+    console.log("Stored player stats:");
+    console.log(playerStats);
 
     // set up mouseover events
     addPopup();
+
+    return 0;
 };
 
 var deactivate = function() {
@@ -349,6 +384,10 @@ var deactivate = function() {
         node.replaceWith(node.firstChild);
         prt.normalize();
     }
+
+    playerSet = {};
+
+    return 0;
 };
 
 var addPopup = function() {
@@ -417,7 +456,9 @@ var showPopup = function(node) {
 };
 
 var requestStats = function(key_bbref, dataHandler) {
-    // request and store data. Optional call back
+    // request and store data
+    //  - dataHandler(stats) is the callback function processing the
+    //  - received data [stats]
     var xhr = new XMLHttpRequest();
     var api_url = "https://localhost:2334/?key_bbref=" + key_bbref;
 
@@ -436,7 +477,48 @@ var requestStats = function(key_bbref, dataHandler) {
     xhr.send(null);
 }
 
+var requestAllPlayers = function(ids_list) {
+    var counter = 0; // tracking no. of processed players
+                    // no-request or request-complete
+    var counter_req = 0;
+    console.log("Requesting stats for all players that have no data yet...");
+
+    ids_list.forEach(function(ids_concat) {
+        // loop of async calls - beware of data mutation
+        var ids = ids_concat.split("_");
+        var key_mlbam = ids[0];
+        var key_bbref = ids[1]; // must retrive ids now 
+                    // - ids[0] will be changed if callback is called later
+        if(!playerStats.hasOwnProperty(key_mlbam)) {
+            requestStats(key_bbref, function(stats) {
+                // executed when a new request is completed
+                storeStats(stats, key_mlbam);
+                counter++; 
+                counter_req++;
+                if (counter == ids_list.length) {
+                    return requestAllComplete(counter_req);
+                }
+            });
+        } else {
+            counter++;
+            if (counter == ids_list.length) {
+                return requestAllComplete(counter_req);
+            }
+        }
+    });
+}
+
+var requestAllComplete = function(cnt_req) {
+    console.log("Completed requests for " + cnt_req + " players");
+    return 0;
+}
+
 var storeStats = function(stats, key_mlbam) {
+    // It is assumed that stats won't need to be requested again
+    //      for a same player before user reload the webpage next time,
+    //      and thus storeStats() is only called once for each player 
+    //      (in all normal situations), and there's no need to check for 
+    //      existing key
     console.log("Storing stats for " + key_mlbam);
     playerStats[key_mlbam] = stats;
 }
@@ -549,6 +631,7 @@ xhr.onload = function() {
                 xhr.status);
         console.log("response length: %d", xhr.responseText.length);
         nameDict = JSON.parse(xhr.responseText);
+        console.log(nameDict["JOHNSON"]);
         mainfunc();
     }
 };
