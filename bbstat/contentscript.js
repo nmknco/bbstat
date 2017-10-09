@@ -2,32 +2,17 @@ console.log("contentscript executed");
 
 var nameDict;
 var latinDict;
-var localDict;
-
-var xhr = new XMLHttpRequest();
-var dictURL = chrome.runtime.getURL("data/people.json");
-
-xhr.onload = function() {
-    if (xhr.status == 200) {
-        console.log("name dictionary loaded - response status: %d",
-                xhr.status);
-        console.log("response length: %d", xhr.responseText.length);
-        nameDict = JSON.parse(xhr.responseText);
-        mainfunc();
-    }
-};
-
-xhr.open("GET", dictURL, true);
-xhr.send(null);
+var localDict; // local name-playerinfo dict
+var playerStats; // stores complete stats get from xhr response
 
 // need to run below as a call back
 var mainfunc = function() {
 
     latinDict = loadLatinDict();
     localDict = {};
+    if (playerStats === undefined) playerStats = {}; // let it persist through deactivation?
     chrome.runtime.onMessage.addListener(
         function(message, sender, sendResponse) {
-            console.log("woohoo!");
             console.log("Received Message: " + message.message);
             if (message.message == "activate")
                 activate();
@@ -383,12 +368,17 @@ var showPopup = function(node) {
     var $prt = $node.parent();
     $prt.attr("data-title-org", $prt.attr("title")).removeAttr("title");
 
+    var offset = $node.offset(); // need to adjust offset both
+            // for new and existing popups to deal with multiple occurences
+
     if ($popup.length) {
         // update..?
         // and show
+        $popup.css("left", offset.left)
+              .css("top", offset.top + 15);
         $popup.show();
     } else {
-        var offset = $node.offset();
+        
         // console.log($node.offset());
         $popup = $("<div></div>")
                 .attr("id", popupID)
@@ -408,33 +398,58 @@ var showPopup = function(node) {
         );
         // request statistics from API
         // right now only request once on $popup create
-        var key_bbref = node.id.split("_")[1];
-        var xhr = new XMLHttpRequest();
-        var api_url = "https://localhost:2334/?key_bbref=" + key_bbref;
+        var ids = node.id.split("_");
+        var key_mlbam = ids[0];
+        var stats = playerStats[key_mlbam];
 
-        xhr.onload = function() {
-            handleDataInPopup(xhr, $popup);
+        if (!stats) {
+            console.log("No stored stats for " + key_mlbam + ". Requesting...");
+            requestStats(ids[1], function(stats) {
+                storeStats(stats, key_mlbam);
+                updateStatsInPopup(stats, $popup);
+            });
         }
-
-        xhr.open("GET", api_url, true);
-        xhr.send(null);
+        else {
+            console.log("Using stored stats for " + key_mlbam);
+            updateStatsInPopup(stats, $popup);
+        }
     }
 };
 
-var handleDataInPopup = function(xhr, $popup) {
-    if (xhr.status == 200) {
-        console.log("%d: DATA API response received", xhr.status);
-        console.log("response length: %d", xhr.responseText.length);
-        var stats = JSON.parse(xhr.responseText.replace(/\'/g, "\""));
-        console.log(stats);
+var requestStats = function(key_bbref, dataHandler) {
+    // request and store data. Optional call back
+    var xhr = new XMLHttpRequest();
+    var api_url = "https://localhost:2334/?key_bbref=" + key_bbref;
 
-        var recentrow = stats[stats.length-1];
-        if (recentrow.hasOwnProperty("AVG")) {
-            var slash = recentrow.Year + ": " + recentrow.AVG + "/";
-            slash += recentrow.OBP + "/" + recentrow.SLG;
-            console.log(slash);
-            $popup.find("._stats_div").text(slash);
+    xhr.onload = function() {
+        if (xhr.status == 200) {
+            console.log("%d: DATA API response received", xhr.status);
+            console.log("response length: %d", xhr.responseText.length);
+            var stats = JSON.parse(xhr.responseText.replace(/\'/g, "\""));
+            console.log(stats);
+            
+            dataHandler(stats);
         }
+    }
+
+    xhr.open("GET", api_url, true);
+    xhr.send(null);
+}
+
+var storeStats = function(stats, key_mlbam) {
+    console.log("Storing stats for " + key_mlbam);
+    playerStats[key_mlbam] = stats;
+}
+
+var updateStatsInPopup = function(stats, $popup) {
+
+    // insert stats in valid xhr response into the popup
+    var recentrow = stats[stats.length-1];
+    if (recentrow.hasOwnProperty("AVG")) {
+        var slash = recentrow.Year + ": " + recentrow.AVG + "/";
+        slash += recentrow.OBP + "/" + recentrow.SLG;
+        console.log(slash);
+        $popup.find("._stats_div").text(slash);
     }
 };
 
@@ -521,4 +536,22 @@ var insertCSS = function(){
 
 };
 
+
+
 $(document).ready(insertCSS);
+
+var xhr = new XMLHttpRequest();
+var dictURL = chrome.runtime.getURL("data/people.json");
+
+xhr.onload = function() {
+    if (xhr.status == 200) {
+        console.log("name dictionary loaded - response status: %d",
+                xhr.status);
+        console.log("response length: %d", xhr.responseText.length);
+        nameDict = JSON.parse(xhr.responseText);
+        mainfunc();
+    }
+};
+
+xhr.open("GET", dictURL, true);
+xhr.send(null);
