@@ -1,10 +1,11 @@
 var activated = false;
 
 $(document).ready(function() {
-    var $button1 = $("#btn1");
-    $button1.click(function() {
+
+    var $activate = $("#activate");
+    $activate.change(function() {
         // send message to contentscript
-        var msg = activated ? "deactivate" : "activate";
+        var msg = this.checked ? "activate" : "deactivate";
         chrome.tabs.query(
             {active: true, currentWindow: true},
             function(tabs) {
@@ -13,15 +14,11 @@ $(document).ready(function() {
                     { message: msg },
                     function(response) {
                         // console.log(response);
-                        if (response.status == 0) {
-                            if (response.message == "activateDONE") {
-                                activated = true;
-                                $button1.text("Deactivate");
-                            }
-                            else if (response.message == "deactivateDONE") {
-                                activated = false;
-                                $button1.text("Activate");
-                            }
+                        if (response.message == "activated") {
+                            activated = true;
+                        }
+                        else if (response.message == "deactivated") {
+                            activated = false;
                         }
                 });
             }
@@ -38,9 +35,8 @@ $(document).ready(function() {
                     tabs[0].id,
                     { message: msg },
                     function(response) {
-                        if (response.status == 0 && 
-                            response.message == "getAllDONE") {
-                            console.log("getAll complete");
+                        if (response.message == "all request sent") {
+                            console.log(response.message);
                         }
                     }
                 );
@@ -48,3 +44,16 @@ $(document).ready(function() {
         );
     })
 });
+
+
+chrome.runtime.onMessage.addListener(
+    function(message, sender, sendResponse) {
+        var type = message.type;
+        if (type == "updateProgress") {
+            $("#progress").text(message.data.count);
+        }
+        sendResponse({
+            message: "Progress updated"
+        })
+    }
+);

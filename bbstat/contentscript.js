@@ -20,23 +20,21 @@ var mainfunc = function() {
     chrome.runtime.onMessage.addListener(
         function(message, sender, sendResponse) {
             var msg = message.message;
-            var res_code; // response status/err code
             var res_msg = ""
             console.log("Received Message: " + msg);
             if (msg == "activate") {
-                res_code = activate();
-                res_msg = "activateDONE";
+                activate();
+                res_msg = "activated";
             }
             else if (msg == "deactivate") {
-                res_code = deactivate();
-                res_msg = "deactivateDONE";
+                deactivate();
+                res_msg = "deactivated";
             }
             else if (msg == "getAll") {
-                res_code = requestAllPlayers(Object.keys(playerSet));
-                res_msg = "getAllDONE";
+                requestAllPlayers(Object.keys(playerSet));
+                res_msg = "all request sent";
             }
             sendResponse({
-                status: res_code,
                 message: res_msg
             });
         }
@@ -253,9 +251,9 @@ var activateInner = function(node) {
 
                             // multiple matches: for now use the most recent match
                             if (matches.length > 1) {
-                                console.log("Multiple matches for " + lastName);
+                                // console.log("Multiple matches for " + lastName);
                                 matches.forEach( function(match) {
-                                    console.log(match.key_mlbam + ": " + +match.mlb_played_last);
+                                    // console.log(match.key_mlbam + ": " + +match.mlb_played_last);
                                     if (+match.mlb_played_last > +player.mlb_played_last) {
                                         player = match;
                                     }
@@ -365,7 +363,6 @@ var activate = function() {
     // set up mouseover events
     addPopup();
 
-    return 0;
 };
 
 var deactivate = function() {
@@ -389,7 +386,6 @@ var deactivate = function() {
 
     playerSet = {};
 
-    return 0;
 };
 
 var addPopup = function() {
@@ -480,39 +476,32 @@ var requestStats = function(key_bbref, dataHandler) {
 }
 
 var requestAllPlayers = function(ids_list) {
-    var counter = 0; // tracking no. of processed players
-                    // no-request or request-complete
-    var counter_req = 0;
-    console.log("Requesting stats for all players that have no data yet...");
+    var counter = 0; // tracking no. of completed request
 
+    // iterate once first to get a list of players need new request
+    var toReq = [];
     ids_list.forEach(function(ids_concat) {
-        // loop of async calls - beware of data mutation
         var ids = ids_concat.split("_");
+        if(!playerStats.hasOwnProperty(ids[0]))
+            toReq.push(ids);
+    })
+    var nReq = toReq.length;
+    console.log("Requesting stats for " + nReq + " players that have no data yet...");
+
+    toReq.forEach(function(ids) {
+        // loop of async calls - beware of data mutation - use unmutable types
         var key_mlbam = ids[0];
         var key_bbref = ids[1]; // must retrive ids now 
                     // - ids[0] will be changed if callback is called later
-        if(!playerStats.hasOwnProperty(key_mlbam)) {
-            requestStats(key_bbref, function(stats) {
-                // executed when a new request is completed
-                storeStats(stats, key_mlbam);
-                counter++; 
-                counter_req++;
-                if (counter == ids_list.length) {
-                    return requestAllComplete(counter_req);
-                }
-            });
-        } else {
-            counter++;
-            if (counter == ids_list.length) {
-                return requestAllComplete(counter_req);
+        requestStats(key_bbref, function(stats) {
+            // executed when a new request is completed
+            storeStats(stats, key_mlbam);
+            updateProgress(++counter);
+            if (counter == nReq) {
+                console.log("Completed requests for " + nReq + " players");
             }
-        }
+        });
     });
-}
-
-var requestAllComplete = function(cnt_req) {
-    console.log("Completed requests for " + cnt_req + " players");
-    return 0;
 }
 
 var storeStats = function(stats, key_mlbam) {
@@ -523,6 +512,16 @@ var storeStats = function(stats, key_mlbam) {
     //      existing key
     console.log("Storing stats for " + key_mlbam);
     playerStats[key_mlbam] = stats;
+}
+
+var updateProgress = function(completed_count) {
+    chrome.runtime.sendMessage(
+        {
+            type: "updateProgress",
+            data: { count: completed_count } 
+        }, 
+        function(response) {}
+    );
 }
 
 var updateStatsInPopup = function(stats, $popup) {
@@ -633,7 +632,6 @@ xhr.onload = function() {
                 xhr.status);
         console.log("response length: %d", xhr.responseText.length);
         nameDict = JSON.parse(xhr.responseText);
-        console.log(nameDict["JOHNSON"]);
         mainfunc();
     }
 };
