@@ -76,29 +76,57 @@ def getData(page):
     rows_value = BeautifulSoup(rows_value_str, 'lxml'
                     ).select('#%s_value > tbody > tr' % position_kw)
     # value table only contains MLB-active years
+    #   ALSO HAS "SPACER" ROWS. see /dimangjo01
 
     i = 0  # there may be minor league rows in between MLB rows
     j = 0     # in standard table but not in value table
     data = []
+
     while j < len(rows_value):
         datarow = {}
+
+        # print("%d %d" % (i, j))
+        # known row classes:
+        # - standard table: minors_table, nonroster_table, partial_table, full
+        #       - partial seaons are "partial_table"
+        #       - there's an extra TOT(AL) row for partial seasons, that is full
+        # - value table: spacer, full
+        #       - partial seasons are "full" in value table
+        #       - spacer row is also "partial_table"...
+        # we write TOT row in standard, but it's going to be incomplete because 
+        #   there is no corresponding role in value table
         rs = rows_standard[i]
-        i += 1
-        if 'minors_table' in rs['class']: 
-            continue
+        # print(rs['class'])
+        # two cases to skip i: minors, non-play (injury/military-service)
+        # if 'minors_table' in rs['class'] or 'nonroster_table' in rs['class']:
+        if 'full' not in rs['class'] and 'partial_table' not in rs['class']:
+            i += 1
+            continue 
+
         rv = rows_value[j]
-        j += 1
+        # print(rs['class'])
+        # one case to skip both j: spacer row in value table
+        if 'spacer' in rv['class']:
+            j += 1
+            continue
         # dealing with year column separately as it's a <th>
         datarow["Year"] = getText(rs.select('th[data-stat="year_ID"]')[0])
 
+        # get stats from standard table
         for k, kn in zip(keys1+keys2, keys1_name+keys2_name):
             datarow[kn] = getTextByStat(rs, k)
             # print(kn)
             # print(data[kn])
-        for k, kn in zip(keys3, keys3_name):
-            datarow[kn] = getTextByStat(rv, k)
-            # print(kn)
-            # print(data[kn])
+        i += 1
+
+        # print(datarow)
+        # get stats from value table: only when standard is not a TOTAL row
+        if datarow["Team"] != "TOT":
+            for k, kn in zip(keys3, keys3_name):
+                datarow[kn] = getTextByStat(rv, k)
+                # print(kn)
+                # print(data[kn])
+            j += 1
         data.append(datarow)
 
     print(data)
