@@ -249,18 +249,20 @@ var activateInner = function(node) {
                         }
                         if (matches.length == 0) continue;
                         else if (matches.length >= 1) {
-                            // when > 1 for now use the most recent match
+                            var player = matches[0];
+
+                            // multiple matches: for now use the most recent match
                             if (matches.length > 1) {
-                                for (var k = 1; k < matches.length; k++) {
-                                    if (matches[k]["mlb_played_last"] > matches[0]["mlb_player_last"]) {
-                                        matches[0] = matches[k];
+                                console.log("Multiple matches for " + lastName);
+                                matches.forEach( function(match) {
+                                    console.log(match.key_mlbam + ": " + +match.mlb_played_last);
+                                    if (+match.mlb_played_last > +player.mlb_played_last) {
+                                        player = match;
                                     }
-                                }
+                                });
                             }
 
-
                             // Now we found a player
-                            var player = matches[0]; // info object
 
                             // update local dict and player set
                             // local dict may already has the key from last activation 
