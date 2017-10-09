@@ -6,6 +6,7 @@
     "version":"0.1",
 
     "permissions": [
+        "tabs",
         "storage",
         "http://locahost:2334/*" 
     ],
@@ -26,8 +27,10 @@
     "background": {
         "scripts": [
             "jquery-3.2.1.js",
-            "popup.js"
-        ]
+            "popup.js",
+            "background.js"
+        ],
+        "persistent": true
     },
 
     "web_accessible_resources": ["data/people.json"]

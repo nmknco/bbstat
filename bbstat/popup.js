@@ -1,11 +1,38 @@
-var activated = false;
+var tab_activated;
 
-$(document).ready(function() {
+
+var init = function() {
 
     var $activate = $("#activate");
+
+    // send a message (with current tab info) to background.js
+    //      to get states for current tab, then update both
+    //      1. state variable 2. DOM elements in popup
+
+    // popup request for states is for determine the current
+    //      popup elements (e.g. toggle switch state)
+    // contentscript send request separately to see if activation
+    //      is needed on page load
+    chrome.tabs.query({active: true, currentWindow: true},
+        function(tabs) {
+            // alert("query states from background.js...");
+            chrome.runtime.sendMessage({
+                type: "getStates",
+                tabid: tabs[0].id
+            },
+            function(response) {
+                // update state variable and toggle switch
+                tab_activated = response.data.activated;
+                $activate.prop("checked", tab_activated);
+            });
+        }
+    );
+
+    // add control functionality to the toggle switch
+    
     $activate.change(function() {
-        // send message to contentscript
-        var msg = this.checked ? "activate" : "deactivate";
+        // send message to contentscript when switch flipped
+        msg = this.checked ? "activate" : "deactivate";
         chrome.tabs.query(
             {active: true, currentWindow: true},
             function(tabs) {
@@ -13,14 +40,20 @@ $(document).ready(function() {
                     tabs[0].id,
                     { message: msg },
                     function(response) {
-                        // console.log(response);
                         if (response.message == "activated") {
-                            activated = true;
+                            tab_activated = true;
                         }
                         else if (response.message == "deactivated") {
-                            activated = false;
+                            tab_activated = false;
                         }
-                });
+                        // update states in background
+                        chrome.runtime.sendMessage({
+                            type: "setStates",
+                            tabid: tabs[0].id,
+                            data: {activated: tab_activated}
+                        })
+                    }
+                );
             }
         );
     });
@@ -43,17 +76,18 @@ $(document).ready(function() {
             }
         );
     })
-});
 
-
-chrome.runtime.onMessage.addListener(
-    function(message, sender, sendResponse) {
-        var type = message.type;
-        if (type == "updateProgress") {
-            $("#progress").text(message.data.count);
+    chrome.runtime.onMessage.addListener(
+        function(message, sender, sendResponse) {
+            var type = message.type;
+            if (type == "updateProgress") {
+                $("#progress").text(message.data.count);
+            }
+            sendResponse({
+                message: "Progress updated"
+            })
         }
-        sendResponse({
-            message: "Progress updated"
-        })
-    }
-);
+    );
+}
+
+$(document).ready(init);

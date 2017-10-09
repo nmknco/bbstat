@@ -17,10 +17,21 @@ var mainfunc = function() {
     // The following is initialized in each activation 
     playerSet = {};
 
+    // get tab states from background.js - activate immediately if needed
+    chrome.runtime.sendMessage({
+        type: "getStates",
+        tabid: -1 // use sender.tab.id in listener
+    }, function(response) {
+        console.log(response);
+        if (response.data.activated) {
+            activate();
+        }
+    })
+
     chrome.runtime.onMessage.addListener(
         function(message, sender, sendResponse) {
             var msg = message.message;
-            var res_msg = ""
+            var res_msg = "";
             console.log("Received Message: " + msg);
             if (msg == "activate") {
                 activate();
@@ -355,7 +366,7 @@ var activate = function() {
     console.log("Searching for players...");
 
     activateInner(document.body);
-    console.log("Searched players:");
+    console.log("Found players:");
     console.log(playerSet);
     console.log("Stored player stats:");
     console.log(playerStats);
