@@ -6,7 +6,7 @@ var localDict; // local name-playerinfo dict
 var playerStats; // stores complete stats get from xhr response
 var playerSet; // store a hashset of players found (in concat ids)
 
-var api_path = "http://localhost:2334/?key_bbref=";
+var api_host = "http://localhost:2334";
 
 // need to run below as a call back
 var mainfunc = function() {
@@ -35,15 +35,15 @@ var mainfunc = function() {
             var msg = message.message;
             var res_msg = "";
             console.log("Received Message: " + msg);
-            if (msg == "activate") {
+            if (msg === "activate") {
                 activate();
                 res_msg = "activated";
             }
-            else if (msg == "deactivate") {
+            else if (msg === "deactivate") {
                 deactivate();
                 res_msg = "deactivated";
             }
-            else if (msg == "getAll") {
+            else if (msg === "getAll") {
                 requestAllPlayers(Object.keys(playerSet));
                 res_msg = "all request sent";
             }
@@ -107,7 +107,7 @@ var trimTail = function(word) {
         if (c < "A" || (c > "Z" && c < "a") || c > "z") {
             // Prevent trmming legit names like O'Day
             var c1 = word.charAt(i+1);
-            if (!(c == "'" && c1 >= "A" && c1 <= "Z"))
+            if (!(c === "'" && c1 >= "A" && c1 <= "Z"))
                 break;
         }
         i++;
@@ -120,7 +120,7 @@ var preProcAll = function(word, dict) {
 };
 
 var isCap = function(word) {
-    if (word == "") return false;
+    if (word === "") return false;
     var c0 = word.charAt(0);
     return (c0 >= "A" && c0 <= "Z");
 };
@@ -131,7 +131,7 @@ var activateInner = function(node) {
     // console.log(node.childNodes);
     var skip = 0;
 
-    if (node.nodeType == 3) {
+    if (node.nodeType === 3) {
         // gloabl skip for newly added elements
         // New node will be a collection of textnodes and elements
         // current node is to be replaced with all nodes in newNodes
@@ -141,7 +141,7 @@ var activateInner = function(node) {
 
         // To do: quickly skip empty/blank text nodes
         var splits = node.data.split(/[\s]+/);
-        if (splits.length == 0) return;
+        if (splits.length === 0) return;
 
         var next = trimTail(trimHead(
                 toEnglish(splits[0], latinDict))); // always trimmed
@@ -196,19 +196,19 @@ var activateInner = function(node) {
             if (i > 0) {
                 var pre1 = preProcAll(splits[i-1], latinDict).toUpperCase();
                 // Griffey Jr.
-                if (lastName == "JR" || lastName == "SR" || lastName == "III") {
+                if (lastName === "JR" || lastName === "SR" || lastName === "III") {
                     lastName = pre1 + " " + lastName;
                     preLen = 2;
                 }
                 // den Dekker
-                else if (pre1 == "DE" || pre1 == "DEN" || pre1 == "VAN") {
+                else if (pre1 === "DE" || pre1 === "DEN" || pre1 === "VAN") {
                     lastName = pre1 + " " + lastName;
                     preLen = 2;
                 }
                 // de la Rosa
                 else if (i > 1) {
                     var pre2 = preProcAll(splits[i-2], latinDict).toUpperCase();
-                    if (pre2 == "DE" || pre2 == "VAN") {
+                    if (pre2 === "DE" || pre2 === "VAN") {
                         lastName = pre2 + " " + pre1 + " " + lastName;
                         preLen = 3;
                     }
@@ -229,7 +229,7 @@ var activateInner = function(node) {
                     if (isCap(prev)) {
                         // looking for potential first name preceding
                         var initial = "";
-                        if (prev.length == 2 && prev.charAt(1) == ".") {
+                        if (prev.length === 2 && prev.charAt(1) === ".") {
                             // A. McCutchen
                             // A. J. Burnett
                             initial = prev;
@@ -240,8 +240,8 @@ var activateInner = function(node) {
                             // initial will be "X."
                             // prev will be ".... X."
                         }
-                        else if (prev.length == 4 &&
-                                prev.charAt(1) == "." && prev.charAt(3) == ".") {
+                        else if (prev.length === 4 &&
+                                prev.charAt(1) === "." && prev.charAt(3) === ".") {
                             // R.A. Dickey
                             prev = prev.slice(0,2) + " " + prev.slice(2,4);
                             // console.log(prev + " " + lastName);
@@ -255,10 +255,10 @@ var activateInner = function(node) {
                             prev = prev.toUpperCase();
                             var firstName = players[j]["name_first"].toUpperCase();
                             var fnInit = firstName.charAt(0) + "."
-                            if (prev == firstName || initial == fnInit)
+                            if (prev === firstName || initial === fnInit)
                                 matches.push(players[j]);
                         }
-                        if (matches.length == 0) continue;
+                        if (matches.length === 0) continue;
                         else if (matches.length >= 1) {
                             var player = matches[0];
 
@@ -351,7 +351,7 @@ var activateInner = function(node) {
                                     // to skip the newly created nodes
     }
 
-    else if (node.nodeType == 1 && node.childNodes && 
+    else if (node.nodeType === 1 && node.childNodes && 
             !/(script|style)/i.test(node.tagName)) {
         var chnds = node.childNodes;
         for (var i = 0; i < chnds.length; i++) {
@@ -477,10 +477,10 @@ var requestStats = function(key_bbref, dataHandler) {
     //  - dataHandler(stats) is the callback function processing the
     //  - received data [stats]
     var xhr = new XMLHttpRequest();
-    var api_url = api_path + key_bbref;
+    var api_url = api_host + "?key_bbref=" + key_bbref;
 
     xhr.onload = function() {
-        if (xhr.status == 200) {
+        if (xhr.status === 200) {
             console.log("%d: DATA API response received", xhr.status);
             console.log("response length: %d", xhr.responseText.length);
             var stats = JSON.parse(xhr.responseText.replace(/\'/g, "\""));
@@ -516,7 +516,7 @@ var requestAllPlayers = function(ids_list) {
             // executed when a new request is completed
             storeStats(stats, key_mlbam);
             updateProgress(++counter);
-            if (counter == nReq) {
+            if (counter === nReq) {
                 console.log("Completed requests for " + nReq + " players");
             }
         });
@@ -592,11 +592,13 @@ var fillPopup = function($popup, id) {
                 .attr("class", "_stats_div")
                 .text(stats));
 
-    var headshot_mlb = "http://mlb.mlb.com/mlb/images/players/head_shot/";
-    headshot_mlb += key_mlbam + ".jpg";
+    // var headshot_url = "http://mlb.mlb.com/mlb/images/players/head_shot/";
+    // headshot_url += key_mlbam + ".jpg";
+    var headshot_url = api_host + "/img/" + key_mlbam + ".jpg";
     $popup.append($("<div></div>")
             .addClass("_headshot_div")
-            .append('<img class="_headshot" align="left" src ="' + headshot_mlb + '" />'));
+            .append('<img class="_headshot" align="left" src ="' + 
+                headshot_url + '" />'));
 
     return $popup;
 };
@@ -647,7 +649,7 @@ var xhr = new XMLHttpRequest();
 var dictURL = chrome.runtime.getURL("data/people.json");
 
 xhr.onload = function() {
-    if (xhr.status == 200) {
+    if (xhr.status === 200) {
         console.log("name dictionary loaded - response status: %d",
                 xhr.status);
         console.log("response length: %d", xhr.responseText.length);
