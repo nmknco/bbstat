@@ -408,11 +408,29 @@ var deactivate = function() {
 };
 
 var addPopup = function() {
+    // since this function might be called again by requestAllPlayers()
+    //  We need to avoid adding multiple eventListeners by using named
+    //  functions defined in the outer, persistent scope as callbacks
+
     var playerNodes = document.querySelectorAll("._player_node");
-    for (var i = 0; i < playerNodes.length; i++) {
-        playerNodes[i].addEventListener("mouseover", function() { showPopup(this); }, false);
-        playerNodes[i].addEventListener("mouseout", function() { hidePopup(this); }, false);
-    }
+
+    playerNodes.forEach(function(pNode) {
+
+        // note how "this" inside the handler functions refers to the
+        //      element invoking addEventListener
+        pNode.addEventListener("mouseover", showPopupCb, false);
+        pNode.addEventListener("mouseout",hidePopupCb, false);
+    });
+};
+var showPopupCb = function() {
+    // wrapped nameed function for event listener
+    showPopup(this);
+    // console.log("duplicate eventListener test"); // will be 
+                // called multiple times if multiple listeners are added
+};
+var hidePopupCb = function() {
+    // wrapped nameed function for event listener
+    hidePopup(this);
 };
 
 var showPopup = function(node) {
@@ -452,6 +470,7 @@ var showPopup = function(node) {
                 .css("top", top);
         fillPopup($popup, node.id);
         $("body").append($popup);
+        // keep showing popup when hover over the popup itself
         $popup.hover(
             function() {
                 // console.log(this);
@@ -501,6 +520,9 @@ var requestStats = function(key_bbref, dataHandler) {
             var stats = JSON.parse(xhr.responseText.replace(/\'/g, "\""));
             console.log(stats);
             
+            // this determines the form of callback function when invoking
+            //      requestStats. Here it must take one argument stats
+            //      which is the stats data returned
             dataHandler(stats);
         }
     }
@@ -510,9 +532,14 @@ var requestStats = function(key_bbref, dataHandler) {
 }
 
 var requestAllPlayers = function(ids_list) {
+
+    activate(); // rescan for potential new players on page
+                // and addPopup() again
+
     var counter = 0; // tracking no. of completed request
 
     // iterate once first to get a list of players need new request
+    // (players whose stats are not retrieved earlier and stored in the memory)
     var toReq = [];
     ids_list.forEach(function(ids_concat) {
         var ids = ids_concat.split("_");
@@ -521,6 +548,7 @@ var requestAllPlayers = function(ids_list) {
     })
     var nReq = toReq.length;
     console.log("Requesting stats for " + nReq + " players that have no data yet...");
+    updateProgress(counter, nReq);
 
     toReq.forEach(function(ids) {
         // loop of async calls - beware of data mutation - use unmutable types
@@ -530,7 +558,7 @@ var requestAllPlayers = function(ids_list) {
         requestStats(key_bbref, function(stats) {
             // executed when a new request is completed
             storeStats(stats, key_mlbam);
-            updateProgress(++counter);
+            updateProgress(++counter, nReq);
             if (counter === nReq) {
                 console.log("Completed requests for " + nReq + " players");
             }
@@ -549,11 +577,14 @@ var storeStats = function(stats, key_mlbam) {
     playerStats[key_mlbam] = stats;
 }
 
-var updateProgress = function(completed_count) {
+var updateProgress = function(completed_count, total_count) {
     chrome.runtime.sendMessage(
         {
             type: "updateProgress",
-            data: { count: completed_count } 
+            data: { 
+                completed: completed_count,
+                total: total_count 
+            } 
         }, 
         function(response) {}
     );
@@ -564,7 +595,7 @@ var updateStatsInPopup = function(stats, $popup) {
 
     // insert stats in valid xhr response into the popup
 
-    if (stats.length == 0) return;
+    if (!stats || stats.length === 0) return;
     
     // batter-pitcher
     var fields;
@@ -606,6 +637,7 @@ var updateStatsInPopup = function(stats, $popup) {
 var hidePopup = function(node) {
     var $node = $(node);
     var $prt = $node.parent();
+    // restore the original title attribute if there's one stored
     $prt.attr("title", $prt.attr("data-title-org")).removeAttr("data-title-org");
 
     var popupID = "_popup_" + node.id;
@@ -613,7 +645,7 @@ var hidePopup = function(node) {
         if(!($('#' + popupID + ":hover").length > 0)) {
             $("#" + popupID).hide();
         }
-    }, 200);
+    }, 200); // time window for user to move mouse to the popup itself
 };
 
 var fillPopup = function($popup, id) {

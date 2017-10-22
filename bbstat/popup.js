@@ -80,8 +80,22 @@ var init = function() {
     chrome.runtime.onMessage.addListener(
         function(message, sender, sendResponse) {
             var type = message.type;
-            if (type == "updateProgress") {
-                $("#progress").text(message.data.count);
+
+            if (type == "updateProgress") { 
+                var progressDiv =  $("#progress");
+                var msg = "Data for " + message.data.completed 
+                            + "/" + message.data.total
+                            + " new players loaded";
+                progressDiv.text(msg);
+                if (message.data.completed === message.data.total) {
+                    progressDiv.append("<p></p>")
+                                .text("Data for all players are loaded")
+                                .fadeOut(2000, function() {
+                // actions after fadeOut must be in the call back
+                //      again, this refers back to progressDiv
+                                        $(this).text("").show();
+                                })
+                }
             }
             sendResponse({
                 message: "Progress updated"
