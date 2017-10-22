@@ -16,8 +16,9 @@ var options = {
     cert: fs.readFileSync(path.join(__dirname, 'keys', 'client-cert.pem'))
 };
 
-// serving images
+// serving images - express will search here first
 app.use(express.static(path.join(__dirname, 'public')));
+
 // fall-through actions when image does not exist
 app.get('/img/*', function(req, res) {
     // download and serve. Serve default when download fails
@@ -26,7 +27,7 @@ app.get('/img/*', function(req, res) {
 
 });
 
-// data api
+// main data api
 app.get('/', function(req, res) {
     // note here res_app is the Response object in express
     //      which is a http.ServerResponse obj

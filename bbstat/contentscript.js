@@ -676,14 +676,18 @@ var fillPopup = function($popup, id) {
             .attr("target", "_blank")
     );
 
-
     // var headshot_url = "http://mlb.mlb.com/mlb/images/players/head_shot/";
     // headshot_url += key_mlbam + ".jpg";
-    var headshot_url = api_host + "/img/" + key_mlbam + ".jpg";
-    $header.append($("<div></div>")
+    var imgUrls = {
+        // defaul: api_host + "/img/" + "bb.png",
+        headshot: api_host + "/img/" + key_mlbam + ".jpg",
+        // check: api_host + "/img?key_mlbam=" + key_mlbam
+    };
+
+    var $img = $header.append($("<div></div>")
             .addClass("_headshot_div")
             .append('<img class="_headshot" align="left" src ="' + 
-                headshot_url + '" />'));
+                imgUrls.headshot + '" />'));
 
     // div for stats table
     var stats = "";
