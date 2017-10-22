@@ -6,7 +6,7 @@ var localDict; // local name-playerinfo dict
 var playerStats; // stores complete stats get from xhr response
 var playerSet; // store a hashset of players found (in concat ids)
 
-var api_host = "http://localhost:2334";
+var api_host = "https://localhost:2334";
 var fieldsPitching = ["Year", "Team", "Salary", "ERA", "FIP", "WHIP",
                         "IP", "G", "GS", "SO9", "BB9", "ERA+"];
 var fieldsBatting = ["Year", "Team", "Salary", "AVG", "OBP", "SLG", "WAR", 
@@ -665,8 +665,9 @@ var fillPopup = function($popup, id) {
     $headerText.append($("<div></div>")
             .addClass("_player_name")
             .text(player["name_first"] + " " + player["name_last"]));
-    $headerText.append($("<a></a>").text("Baseball Reference").attr(
-            "href", "https://www.baseball-reference.com/players/"
+    $headerText.append($("<a></a>")
+            .text("Baseball Reference")
+            .attr("href", "https://www.baseball-reference.com/players/"
                     + key_bbref.charAt() + "/" + key_bbref + ".shtml")
             .attr("target", "_blank")
     );

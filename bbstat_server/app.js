@@ -3,7 +3,7 @@ var express = require('express');
 // var querystring = require('querystring');
 var https = require('https');
 var http = require('http');
-// var fs = require('fs');
+var fs = require('fs');
 var path = require('path');
 
 var dataModule = require('./data');
@@ -11,14 +11,13 @@ var imageModule = require('./image');
 
 var app = express();
 var port = 2334;
-// var options = {
-//     key: fs.readFileSync('keys/client-key.pem'),
-//     cert: fs.readFileSync('keys/client-cert.pem')
-// };
-var publicDir = path.join(__dirname, 'public');
+var options = {
+    key: fs.readFileSync(path.join(__dirname, 'keys', '/client-key.pem')),
+    cert: fs.readFileSync(path.join(__dirname, 'keys', 'client-cert.pem'))
+};
 
 // serving images
-app.use(express.static(publicDir));
+app.use(express.static(path.join(__dirname, 'public')));
 // fall-through actions when image does not exist
 app.get('/img/*', function(req, res) {
     // download and serve. Serve default when download fails
@@ -37,10 +36,10 @@ app.get('/', function(req, res) {
 });
 
 
-http.createServer(app).listen(port, function() {
+// http.createServer(app).listen(port, function() {
+//     console.log("Listening on %s...", port);
+// });
+
+https.createServer(options, app).listen(port, function() {
     console.log("Listening on %s...", port);
 });
-
-// https.createServer(options, app).listen(porthttps, function() {
-//     console.log("Listening on %s...", porthttps);
-// });
