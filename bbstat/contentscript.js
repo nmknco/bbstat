@@ -710,7 +710,7 @@ var insertCSS = function(){
     rule += "background-color: #f8f8f8;"; 
     // rule += "border: 1px solid #000000;";
     rule += "margin: 10px; padding: 10px; border-radius: 10px;";
-    rule += "width: " + popupWidth + ";";
+    rule += "width: " + popupWidth + "px;";
     rule += "-webkit-box-shadow: 1px 1px 5px 0px rgba(50,50,50,0.75);";
     rule += "-moz-box-shadow: 1px 1px 5px 0px rgba(50,50,50,0.75);";
     rule += "box-shadow: 1px 1px 5px 0px rgba(50,50,50,0.75);";
@@ -742,13 +742,14 @@ var insertCSS = function(){
     rule = "._stats_div { overflow-x: auto; margin-left: 1.1em;}";
     styleEl.sheet.insertRule(rule, 0);
 
-    rule = "._stats_table { font-size: 9px;}";
+    rule = "._stats_table { font-size: 9px; "
+    rule += "border-spacing: 2px; border-collapse:separate;}"
     styleEl.sheet.insertRule(rule, 0);
 
-    rule = "._stats_table td { border: 1px;}";
+    rule = "._stats_table td { border-width: 1px; border-color: #ffffff; }";
     styleEl.sheet.insertRule(rule, 0);
 
-    rule = "._row_header { background: #e0e0d0;}";
+    rule = "._row_header { background: #e0e0d0; font-weight: bold; }";
     styleEl.sheet.insertRule(rule, 0);
 
     rule = "._row {}";
