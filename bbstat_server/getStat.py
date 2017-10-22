@@ -36,7 +36,7 @@ def getData(key_bbref, collection):
     if page != 1:
         # print("getPage successful!")
         data = extractData(page)
-        writeToDb(key_bbref, data)
+        writeToDb(key_bbref, data, collection)
         return data
     return 1
 
