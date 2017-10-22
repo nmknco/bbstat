@@ -60,21 +60,30 @@ var init = function() {
 
     var $loadAllBtn = $("#getAllBtn");
     $loadAllBtn.click(function() {
-        var msg = "getAll"
-        chrome.tabs.query(
-            {active: true, currentWindow: true},
-            function(tabs) {
-                chrome.tabs.sendMessage(
-                    tabs[0].id,
-                    { message: msg },
-                    function(response) {
-                        if (response.message == "all request sent") {
-                            console.log(response.message);
+        if (!tab_activated) {
+            // do nothing if not activated
+            var msgDiv =  $("#msgbar");
+            msgDiv.text("Please activate first")
+                .fadeOut(2000, function() {
+                        $(this).text("").show();
+            });
+        } else {
+            var msg = "getAll"
+            chrome.tabs.query(
+                {active: true, currentWindow: true},
+                function(tabs) {
+                    chrome.tabs.sendMessage(
+                        tabs[0].id,
+                        { message: msg },
+                        function(response) {
+                            if (response.message == "all request sent") {
+                                console.log(response.message);
+                            }
                         }
-                    }
-                );
-            }
-        );
+                    );
+                }
+            );
+        }
     })
 
     chrome.runtime.onMessage.addListener(
@@ -82,17 +91,17 @@ var init = function() {
             var type = message.type;
 
             if (type == "updateProgress") { 
-                var progressDiv =  $("#progress");
+                var msgDiv =  $("#msgbar");
                 var msg = "Data for " + message.data.completed 
                             + "/" + message.data.total
                             + " new players loaded";
-                progressDiv.text(msg);
+                msgDiv.text(msg);
                 if (message.data.completed === message.data.total) {
-                    progressDiv.append("<p></p>")
+                    msgDiv.append("<p></p>")
                                 .text("Data for all players are loaded")
                                 .fadeOut(2000, function() {
                 // actions after fadeOut must be in the call back
-                //      again, this refers back to progressDiv
+                //      again, this refers back to msgDiv
                                         $(this).text("").show();
                                 })
                 }

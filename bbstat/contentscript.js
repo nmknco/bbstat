@@ -533,6 +533,10 @@ var requestStats = function(key_bbref, dataHandler) {
 
 var requestAllPlayers = function(ids_list) {
 
+    // Assuming extension activated
+    // This will not be called after button press if not activated
+    //      condition checked in popup.js
+
     activate(); // rescan for potential new players on page
                 // and addPopup() again
 
@@ -739,6 +743,9 @@ var insertCSS = function(){
     styleEl.sheet.insertRule(rule, 0);
 
     rule = "._stats_table { font-size: 9px;}";
+    styleEl.sheet.insertRule(rule, 0);
+
+    rule = "._stats_table td { border: 1px;}";
     styleEl.sheet.insertRule(rule, 0);
 
     rule = "._row_header { background: #e0e0d0;}";
