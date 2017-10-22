@@ -6,6 +6,8 @@ var localDict; // local name-playerinfo dict
 var playerStats; // stores complete stats get from xhr response
 var playerSet; // store a hashset of players found (in concat ids)
 
+var api_path = "http://localhost:2334/?key_bbref=";
+
 // need to run below as a call back
 var mainfunc = function() {
 
@@ -453,12 +455,18 @@ var showPopup = function(node) {
         if (!stats) {
             console.log("No stored stats for " + key_mlbam + ". Requesting...");
             requestStats(ids[1], function(stats) {
-                storeStats(stats, key_mlbam);
-                updateStatsInPopup(stats, $popup);
+                // dataHandler callback for requestStats
+                if (stats.error) {
+                    // api returns error message
+                    console.log("Error: " + stats.error);
+                } else {
+                    storeStats(stats, key_mlbam);
+                    updateStatsInPopup(stats, $popup);
+                }
             });
         }
         else {
-            console.log("Using stored stats for " + key_mlbam);
+            console.log("Using locally stored stats for " + key_mlbam);
             updateStatsInPopup(stats, $popup);
         }
     }
@@ -469,7 +477,7 @@ var requestStats = function(key_bbref, dataHandler) {
     //  - dataHandler(stats) is the callback function processing the
     //  - received data [stats]
     var xhr = new XMLHttpRequest();
-    var api_url = "https://localhost:2334/?key_bbref=" + key_bbref;
+    var api_url = api_path + key_bbref;
 
     xhr.onload = function() {
         if (xhr.status == 200) {
@@ -516,6 +524,7 @@ var requestAllPlayers = function(ids_list) {
 }
 
 var storeStats = function(stats, key_mlbam) {
+    // Store stats in the memory
     // It is assumed that stats won't need to be requested again
     //      for a same player before user reload the webpage next time,
     //      and thus storeStats() is only called once for each player 
