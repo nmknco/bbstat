@@ -1,4 +1,4 @@
-console.log("contentscript executed");
+console.log("contentscript is being executed");
 
 var nameDict;
 var latinDict;
@@ -7,6 +7,12 @@ var playerStats; // stores complete stats get from xhr response
 var playerSet; // store a hashset of players found (in concat ids)
 
 var api_host = "http://localhost:2334";
+var fieldsPitching = ["Year", "Team", "Salary", "ERA", "FIP", "WHIP",
+                        "IP", "G", "GS", "SO9", "BB9", "ERA+"];
+var fieldsBatting = ["Year", "Team", "Salary", "AVG", "OBP", "SLG", "WAR", 
+                        "PA", "HR", "RBI", "OPS+", "SB", "BB", "SO"];
+
+var popupWidth = 240; // used in css injection and position calculation
 
 // need to run below as a call back
 var mainfunc = function() {
@@ -412,29 +418,38 @@ var addPopup = function() {
 var showPopup = function(node) {
     // using jQuery for offest()
 
+    // Popup content can be generated only once, but
+    //  positions need to be calculated each time because of 
+    //  possible window and layout changes
+
     var popupID = "_popup_" + node.id;
     var $popup = $("#" + popupID);
     var $node = $(node);    // convert to jQuery objectv
     var $prt = $node.parent();
+    // disable tooltip but store original value in a data- field
     $prt.attr("data-title-org", $prt.attr("title")).removeAttr("title");
 
     var offset = $node.offset(); // need to adjust offset both
             // for new and existing popups to deal with multiple occurences
+    var ww = $(window).width();
+    var pad = 40; // padding controlling distance to right edge of window
+    var left = offset.left + popupWidth < ww - pad ? 
+                    offset.left : ww - pad - popupWidth;
+    var top = offset.top + 15;
 
     if ($popup.length) {
-        // update..?
-        // and show
-        $popup.css("left", offset.left)
-              .css("top", offset.top + 15);
+        // if already created, update position and show
+        $popup.css("left", left)
+              .css("top", top);
         $popup.show();
     } else {
-        
+        // create new popup window - only once per reload
         // console.log($node.offset());
         $popup = $("<div></div>")
                 .attr("id", popupID)
                 .attr("class", "_player_popup")
-                .css("left", offset.left)
-                .css("top", offset.top + 15);
+                .css("left", left)
+                .css("top", top);
         fillPopup($popup, node.id);
         $("body").append($popup);
         $popup.hover(
@@ -546,14 +561,46 @@ var updateProgress = function(completed_count) {
 
 var updateStatsInPopup = function(stats, $popup) {
 
+
     // insert stats in valid xhr response into the popup
-    var recentrow = stats[stats.length-1];
-    if (recentrow.hasOwnProperty("AVG")) {
-        var slash = recentrow.Year + ": " + recentrow.AVG + "/";
-        slash += recentrow.OBP + "/" + recentrow.SLG;
-        console.log(slash);
-        $popup.find("._stats_div").text(slash);
+
+    if (stats.length == 0) return;
+    
+    // batter-pitcher
+    var fields;
+    if (stats[0].hasOwnProperty("AVG")) {
+        fields = fieldsBatting;
+    } else {
+        fields = fieldsPitching;
     }
+
+    var $statsDiv = $popup.find("._stats_div");
+    var $table = $("<table></table>").addClass("_stats_table");
+    $statsDiv.append($table);
+    // var mostRecentStat = stats.slice(-1).pop(); // guaranteed to be complete (not TOT)
+                                            // use this row for col names
+    stats.forEach(function(yearStat, i) {
+        if (i == 0) {
+            // header row
+            var $headerRow = $("<tr></tr>")
+                    .addClass("_row_header");
+            $table.append($headerRow);
+            fields.forEach(function(statName, i) {
+                $headerRow.append($("<th></th>")
+                        .addClass(i == 0 ? "_td_freeze" : "")
+                        .text(statName));
+            });
+        }
+        var $row = $("<tr></tr>")
+                .addClass(i%2 === 0 ? "_row" : "_row_alter"); // color alternation
+        $table.append($row);
+        fields.forEach(function(statName, i) {
+            $row.append($("<td></td>")
+                .addClass(i == 0 ? "_td_freeze" : "")
+                .text(yearStat[statName] || '-'));
+        });
+    })
+    $statsDiv.find("._loading_msg").text(""); // remove the "loading" message
 };
 
 var hidePopup = function(node) {
@@ -570,15 +617,19 @@ var hidePopup = function(node) {
 };
 
 var fillPopup = function($popup, id) {
+    // create and return a popup window
     var ids = id.split("_");
     var key_mlbam = ids[0];
     var key_bbref = ids[1];
     var player = localDict[key_mlbam];
 
+    // header div including texts and photo
+    var $header = $("<div></div>").addClass("_header");
+    $popup.append($header);
 
-
-    $popup.append($("<div></div>").addClass("_header_texts"));
-    var $headerText = $popup.find("._header_texts");
+    // header texts (player info, links, etc.)
+    var $headerText = $("<div></div>").addClass("_header_texts");
+    $header.append($headerText);
     $headerText.append($("<div></div>")
             .addClass("_player_name")
             .text(player["name_first"] + " " + player["name_last"]));
@@ -587,18 +638,27 @@ var fillPopup = function($popup, id) {
                     + key_bbref.charAt() + "/" + key_bbref + ".shtml")
             .attr("target", "_blank")
     );
-    var stats = "";
-    $headerText.append($("<div></div>")
-                .attr("class", "_stats_div")
-                .text(stats));
+
 
     // var headshot_url = "http://mlb.mlb.com/mlb/images/players/head_shot/";
     // headshot_url += key_mlbam + ".jpg";
     var headshot_url = api_host + "/img/" + key_mlbam + ".jpg";
-    $popup.append($("<div></div>")
+    $header.append($("<div></div>")
             .addClass("_headshot_div")
             .append('<img class="_headshot" align="left" src ="' + 
                 headshot_url + '" />'));
+
+    // div for stats table
+    var stats = "";
+    $popup.append(
+            $("<div></div>")
+            .addClass("_stats_div")
+            .append(
+                $("<div></div>")
+                .addClass("_loading_msg")
+                .text(" Loading statistics...")
+            )
+    );
 
     return $popup;
 };
@@ -609,11 +669,11 @@ var insertCSS = function(){
 
     var rule = "._player_popup { ";
     rule += "position: absolute; z-index: 100;";
-    rule += "display: flex;";
+    // rule += "display: flex;";
     rule += "background-color: #f8f8f8;"; 
     // rule += "border: 1px solid #000000;";
     rule += "margin: 10px; padding: 10px; border-radius: 10px;";
-    rule += "width: 240px;";
+    rule += "width: " + popupWidth + ";";
     rule += "-webkit-box-shadow: 1px 1px 5px 0px rgba(50,50,50,0.75);";
     rule += "-moz-box-shadow: 1px 1px 5px 0px rgba(50,50,50,0.75);";
     rule += "box-shadow: 1px 1px 5px 0px rgba(50,50,50,0.75);";
@@ -621,10 +681,7 @@ var insertCSS = function(){
     rule += " }";
     styleEl.sheet.insertRule(rule, 0);
 
-    rule = "._headshot { ";
-    rule += "width: 60px;";
-    rule += "border: 2px solid white; border-radius: 7px; margin: 0px 5px 5px 5px";
-    rule += " }";
+    rule = "._header { display: flex; }";
     styleEl.sheet.insertRule(rule, 0);
 
     rule = "._headshot_div { width: 80px; height: 100px; }";
@@ -633,10 +690,34 @@ var insertCSS = function(){
     rule = "._header_texts { width: 100%; }";
     styleEl.sheet.insertRule(rule, 0);
 
+    rule = "._headshot { ";
+    rule += "width: 60px;";
+    rule += "border: 2px solid white; border-radius: 7px; margin: 0px 5px 5px 5px";
+    rule += " }";
+    styleEl.sheet.insertRule(rule, 0);
+
     rule = "._player_name { font-weight: bold; }";
     styleEl.sheet.insertRule(rule, 0);
 
     rule = "._player_popup a { color: black; }";
+    styleEl.sheet.insertRule(rule, 0);
+
+    rule = "._stats_div { overflow-x: auto; margin-left: 1.1em;}";
+    styleEl.sheet.insertRule(rule, 0);
+
+    rule = "._stats_table { font-size: 9px;}";
+    styleEl.sheet.insertRule(rule, 0);
+
+    rule = "._row_header { background: #e0e0d0;}";
+    styleEl.sheet.insertRule(rule, 0);
+
+    rule = "._row {}";
+    styleEl.sheet.insertRule(rule, 0);
+
+    rule = "._row_alter { background: #e9e9d9;}";
+    styleEl.sheet.insertRule(rule, 0);
+
+    rule = "._td_freeze { position: absolute; left: 0.5em; }";
     styleEl.sheet.insertRule(rule, 0);
 
 };
