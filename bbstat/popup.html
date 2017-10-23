@@ -5,7 +5,7 @@
     <style>
         body {
             font-family: sans-serif;
-            font-size: 16px;
+            /*font-size: 16px;*/
             /*font-weight: bold;*/
             width: 300px;
             margin: 0;
@@ -17,11 +17,13 @@
             display: flex;
             align-items: center;
             text-align: center;
+            font-size: 13px;
         }
-        .textdiv {
+        .menutext {
             width: 68px;
             padding: 0 10px;
-            text-align: right
+            text-align: right;
+            font-weight: bold;
         }
         /* The switch - the box around the slider */
         .switch {
@@ -90,8 +92,9 @@
     </style>
   </head>
   <body>
-    <div class="sec">
-      <div class="textdiv"> Activate </div>
+    <div class="sec" id="initMsg">Loading local dictionaries...</div>
+    <div class="sec" id="menuMain">
+      <div class="menutext"> Activate </div>
       <label class="switch">
         <input type="checkbox" id="activate">
         <span class="slider"></span>

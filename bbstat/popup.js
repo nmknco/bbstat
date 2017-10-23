@@ -1,9 +1,15 @@
-var tab_activated;
+// in general, we send tab-state updating message to background.js
+//      from contentscript instead of from here, since contentscript
+//      has better persistence.
 
+var tab_activated;
 
 var init = function() {
 
     var $activate = $("#activate");
+    var $menuMain = $("#menuMain");
+    var $initMsg = $("#initMsg");
+    $menuMain.hide();
 
     // send a message (with current tab info) to background.js
     //      to get states for current tab, then update both
@@ -13,6 +19,7 @@ var init = function() {
     //      popup elements (e.g. toggle switch state)
     // contentscript send request separately to see if activation
     //      is needed on page load
+    // This needs to be called everytime popup is opened
     chrome.tabs.query({active: true, currentWindow: true},
         function(tabs) {
             // alert("query states from background.js...");
@@ -24,6 +31,12 @@ var init = function() {
                 // update state variable and toggle switch
                 tab_activated = response.data.activated;
                 $activate.prop("checked", tab_activated);
+
+                // show menu when current tab is initialized
+                if (response.data.initialized) {
+                    $menuMain.show();
+                    $initMsg.hide();
+                }
             });
         }
     );
@@ -46,12 +59,8 @@ var init = function() {
                         else if (response.message == "deactivated") {
                             tab_activated = false;
                         }
-                        // update states in background
-                        chrome.runtime.sendMessage({
-                            type: "setStates",
-                            tabid: tabs[0].id,
-                            data: {activated: tab_activated}
-                        })
+                        // let content script notify and update 
+                        //      tab states in background
                     }
                 );
             }
@@ -88,27 +97,35 @@ var init = function() {
 
     chrome.runtime.onMessage.addListener(
         function(message, sender, sendResponse) {
-            var type = message.type;
-
-            if (type == "updateProgress") { 
-                var msgDiv =  $("#msgbar");
-                var msg = "Data for " + message.data.completed 
-                            + "/" + message.data.total
-                            + " new players loaded";
-                msgDiv.text(msg);
-                if (message.data.completed === message.data.total) {
-                    msgDiv.append("<p></p>")
-                                .text("Data for all players are loaded")
-                                .fadeOut(2000, function() {
-                // actions after fadeOut must be in the call back
-                //      again, this refers back to msgDiv
-                                        $(this).text("").show();
-                                })
-                }
+            switch(message.type) {
+                case "updateProgress":
+                    var $msgDiv =  $("#msgbar");
+                    var msg = "Data for " + message.data.completed 
+                                + "/" + message.data.total
+                                + " new players loaded";
+                    $msgDiv.text(msg);
+                    if (message.data.completed === message.data.total) {
+                        $msgDiv.append("<p></p>")
+                                    .text("Data for all players are loaded")
+                                    .fadeOut(2000, function() {
+                    // actions after fadeOut must be in the call back
+                    //      again, this refers back to $msgDiv
+                                            $(this).text("").show();
+                                    })
+                    }
+                    sendResponse({
+                        message: "Progress updated"
+                    });
+                    break;
+                case "initComplete":
+                    // show menu when current tab just completes init
+                    $menuMain.show();
+                    $initMsg.hide();
+                    // again let contentscript notify background.js
+                    break;
+                default:
+                    console.log(message);
             }
-            sendResponse({
-                message: "Progress updated"
-            })
         }
     );
 }

@@ -15,7 +15,7 @@ var fieldsBatting = ["Year", "Team", "Salary", "AVG", "OBP", "SLG", "WAR",
 var popupWidth = 240; // used in css injection and position calculation
 
 // need to run below as a call back
-var mainfunc = function() {
+var initialize = function() {
 
     // The following variables are initialized once and 
     //      changes persist through deactivation
@@ -34,30 +34,58 @@ var mainfunc = function() {
         if (response.data.activated) {
             activate();
         }
-    })
+    });
 
     chrome.runtime.onMessage.addListener(
         function(message, sender, sendResponse) {
             var msg = message.message;
             var res_msg = "";
-            console.log("Received Message: " + msg);
-            if (msg === "activate") {
-                activate();
-                res_msg = "activated";
-            }
-            else if (msg === "deactivate") {
-                deactivate();
-                res_msg = "deactivated";
-            }
-            else if (msg === "getAll") {
-                requestAllPlayers(Object.keys(playerSet));
-                res_msg = "all request sent";
+            // console.log("Received Message: " + msg);
+            switch (msg) {
+                case "activate":
+                    activate();
+                    res_msg = "activated";
+                    // update states in background
+                    chrome.runtime.sendMessage({
+                        type: "setStates",
+                        tabid: -1,
+                        data: {activated: true}
+                    });
+                    break;
+                case "deactivate":
+                    deactivate();
+                    res_msg = "deactivated";
+                    chrome.runtime.sendMessage({
+                        type: "setStates",
+                        tabid: -1,
+                        data: {activated: false}
+                    });
+                    break;
+                case "getAll":
+                    requestAllPlayers(Object.keys(playerSet));
+                    res_msg = "all request sent";
+                    break;
+                default:
+                    console.log("Unknown message: " + msg);
             }
             sendResponse({
                 message: res_msg
             });
         }
     );
+
+    // signaling that variable initialization is complete, main menu
+    //      in control panel can be displayed
+    //  This is sent to by popup
+    chrome.runtime.sendMessage({
+        type: "initComplete",
+    }); 
+    // This is sent to background
+    chrome.runtime.sendMessage({
+        type: "setStates",
+        tabid: -1,
+        data: {initialized: true}
+    });
 };
 
 var loadLatinDict = function() {
@@ -767,10 +795,16 @@ var insertCSS = function(){
 
 };
 
-
-
 $(document).ready(insertCSS);
 
+// reset tab initialization status in background.js to false
+chrome.runtime.sendMessage({
+    type: "setStates",
+    tabid: -1,
+    data: {initialized: false}
+});
+
+// load dict and start initialization when complete
 var xhr = new XMLHttpRequest();
 var dictURL = chrome.runtime.getURL("data/people.json");
 
@@ -780,7 +814,7 @@ xhr.onload = function() {
                 xhr.status);
         console.log("response length: %d", xhr.responseText.length);
         nameDict = JSON.parse(xhr.responseText);
-        mainfunc();
+        initialize();
     }
 };
 

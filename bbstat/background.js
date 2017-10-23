@@ -1,33 +1,45 @@
 // alert("background.js");
 
-var tabStates = {};
+var tabStates = {}; // storing vairous states for tabs
 
 chrome.runtime.onMessage.addListener(
     function(message, sender, sendResponse) {
         var tabid = message.tabid;
-        if (message.type == "getStates") {
-            if (tabid === -1) 
-                tabid = sender.tab.id; // req from contentscript
+        if (tabid === -1)
+            // this is a req from contentscript
+            tabid = sender.tab.id;
+            console.log(tabid);
 
-            var tab_activated = false; // default
-            if (tabStates[tabid] == undefined) {
-                tabStates[tabid] = {activated: false};
-            } else {
-                tab_activated = tabStates[tabid].activated;
-            }
-            sendResponse({
-                message: "OK",
-                data: {activated: tab_activated}
-            })
-        }
-        else if (message.type == "setStates") {
-            if (tabStates[tabid] == undefined) {
-                tabStates[tabid] = {};
-            }
-            var data = message.data
-            Object.keys(data).forEach(function(key) {
-                tabStates[tabid][key] = data[key];
-            });
+        switch(message.type) {
+            case "getStates":
+                if (tabStates[tabid] === undefined) {
+                    // default states
+                    tabStates[tabid] = {
+                        activated: false,
+                        initialized: false
+                    };
+                }
+                sendResponse({
+                    message: "getStates OK",
+                    data: tabStates[tabid] // return the states
+                });
+                break;
+
+            case "setStates":
+                if (tabStates[tabid] === undefined) {
+                    tabStates[tabid] = {};
+                }
+                var data = message.data
+                Object.keys(data).forEach(function(key) {
+                    tabStates[tabid][key] = data[key];
+                });
+                sendResponse({
+                    message: "setStates OK"
+                });
+                break;
+
+            default:
+                console.log(message);
         }
     }
 );
