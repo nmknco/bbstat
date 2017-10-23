@@ -6,7 +6,7 @@ var localDict; // local name-playerinfo dict
 var playerStats; // stores complete stats get from xhr response
 var playerSet; // store a hashset of players found (in concat ids)
 
-var api_host = "https://localhost:2334";
+var api_host = "https://bbstat.nmkn.moe:2334";
 var fieldsPitching = ["Year", "Team", "Salary", "ERA", "FIP", "WHIP",
                         "IP", "G", "GS", "SO9", "BB9", "ERA+"];
 var fieldsBatting = ["Year", "Team", "Salary", "AVG", "OBP", "SLG", "WAR", 

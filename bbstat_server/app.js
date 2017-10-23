@@ -12,8 +12,11 @@ var imageModule = require('./image');
 var app = express();
 var port = 2334;
 var options = {
-    key: fs.readFileSync(path.join(__dirname, 'keys', '/client-key.pem')),
-    cert: fs.readFileSync(path.join(__dirname, 'keys', 'client-cert.pem'))
+    // key: fs.readFileSync(path.join(__dirname, 'keys', 'self-key.pem')),
+    // cert: fs.readFileSync(path.join(__dirname, 'keys', 'self-cert.pem'))
+    ca: fs.readFileSync(path.join(__dirname, 'keys', 'bbstat_nmkn_moe.ca-bundle')),
+    key: fs.readFileSync(path.join(__dirname, 'keys', 'bbstat_nmkn_moe.key')),
+    cert: fs.readFileSync(path.join(__dirname, 'keys', 'bbstat_nmkn_moe.crt'))
 };
 
 // serving images - express will search here first
