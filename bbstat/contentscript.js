@@ -1,4 +1,4 @@
-console.log("contentscript is being executed");
+
 
 var nameDict;
 var latinDict;
@@ -737,65 +737,15 @@ var insertCSS = function(){
     document.head.appendChild(styleEl);
 
     var rule = "._player_popup { ";
-    rule += "position: absolute; z-index: 100;";
-    // rule += "display: flex;";
-    rule += "background-color: #f8f8f8;"; 
-    // rule += "border: 1px solid #000000;";
-    rule += "margin: 10px; padding: 10px; border-radius: 10px;";
-    rule += "width: " + popupWidth + "px;";
-    rule += "-webkit-box-shadow: 1px 1px 5px 0px rgba(50,50,50,0.75);";
-    rule += "-moz-box-shadow: 1px 1px 5px 0px rgba(50,50,50,0.75);";
-    rule += "box-shadow: 1px 1px 5px 0px rgba(50,50,50,0.75);";
-    rule += "font-family: \"Ariel\", sans-serif; font-size: 15px; text-align: left;";
-    rule += " }";
+    rule += "width: " + popupWidth + "px;}";
     styleEl.sheet.insertRule(rule, 0);
-
-    rule = "._header { display: flex; }";
-    styleEl.sheet.insertRule(rule, 0);
-
-    rule = "._headshot_div { width: 80px; height: 100px; }";
-    styleEl.sheet.insertRule(rule, 0);
-
-    rule = "._header_texts { width: 100%; }";
-    styleEl.sheet.insertRule(rule, 0);
-
-    rule = "._headshot { ";
-    rule += "width: 60px;";
-    rule += "border: 2px solid white; border-radius: 7px; margin: 0px 5px 5px 5px";
-    rule += " }";
-    styleEl.sheet.insertRule(rule, 0);
-
-    rule = "._player_name { font-weight: bold; }";
-    styleEl.sheet.insertRule(rule, 0);
-
-    rule = "._player_popup a { color: black; }";
-    styleEl.sheet.insertRule(rule, 0);
-
-    rule = "._stats_div { overflow-x: auto; margin-left: 1.1em;}";
-    styleEl.sheet.insertRule(rule, 0);
-
-    rule = "._stats_table { font-size: 9px; "
-    rule += "border-spacing: 2px; border-collapse:separate;}"
-    styleEl.sheet.insertRule(rule, 0);
-
-    rule = "._stats_table td { border-width: 1px; border-color: #ffffff; }";
-    styleEl.sheet.insertRule(rule, 0);
-
-    rule = "._row_header { background: #e0e0d0; font-weight: bold; }";
-    styleEl.sheet.insertRule(rule, 0);
-
-    rule = "._row {}";
-    styleEl.sheet.insertRule(rule, 0);
-
-    rule = "._row_alter { background: #e9e9d9;}";
-    styleEl.sheet.insertRule(rule, 0);
-
-    rule = "._td_freeze { position: absolute; left: 0.5em; }";
-    styleEl.sheet.insertRule(rule, 0);
-
 };
 
 $(document).ready(insertCSS);
+
+
+
+console.log("contentscript is being executed");
 
 // reset tab initialization status in background.js to false
 chrome.runtime.sendMessage({

@@ -1,0 +1,83 @@
+._player_popup {
+    position: absolute; 
+    z-index: 100;
+    /*display: flex;*/
+    background-color: #f8f8f8; 
+    /*border: 1px solid #000000;*/
+    margin: 10px;
+    padding: 10px; 
+    border-radius: 10px;
+    /*width: 240px;*/
+    -webkit-box-shadow: 1px 1px 5px 0px rgba(50,50,50,0.75);
+    -moz-box-shadow: 1px 1px 5px 0px rgba(50,50,50,0.75);
+    box-shadow: 1px 1px 5px 0px rgba(50,50,50,0.75);
+    font-family: "Ariel", sans-serif;
+    font-size: 15px;
+    text-align: left;
+}
+
+._player_node { 
+    background-color: #ffffa3; 
+}
+
+._header { 
+    display: flex; 
+}
+
+._headshot_div { 
+    width: 80px; 
+    height: 100px; 
+}
+
+._header_texts {
+    width: 100%; 
+}
+
+
+._headshot { 
+    width: 60px;
+    border: 2px solid white; 
+    border-radius: 7px; 
+    margin: 0px 5px 5px 5px;
+ }
+
+._player_name { 
+    font-weight: bold; 
+}
+
+._player_popup a { 
+    color: black; 
+}
+
+._stats_div { 
+    overflow-x: auto; 
+    margin-left: 1.1em;
+}
+
+._stats_table { 
+    font-size: 9px;
+    border-spacing: 2px; 
+    border-collapse: separate;
+}
+
+._stats_table td { 
+    border-width: 1px; 
+    border-color: #ffffff; 
+}
+
+._row_header { 
+    background: #e0e0d0; 
+    font-weight: bold; }
+
+._row {
+
+}
+
+._row_alter { 
+    background: #e9e9d9;
+}
+
+._td_freeze { 
+    position: absolute; 
+    left: 0.5em;
+}
