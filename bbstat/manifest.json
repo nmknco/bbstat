@@ -8,7 +8,7 @@
     "permissions": [
         "tabs",
         "storage",
-        "http://locahost:2334/*" 
+        "http://locahost:2334/*"
     ],
     
     "browser_action": {
@@ -21,7 +21,8 @@
             "matches": ["<all_urls>"],
             "css": ["content.css"],
             "js": [ "jquery-3.2.1.js",
-                    "contentscript.js"]
+                    "contentscript.js",
+                    "contentinit.js"]
         }
     ],
 

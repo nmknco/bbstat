@@ -17,8 +17,7 @@ var getdata = function(req, res) {
         console.log('readingin');
         process.stdout.on('data',function(data){
             console.log(data);
-            res.write(data);
-            res.end();
+            res.write(data, function() {res.end();});
         });
     }
 

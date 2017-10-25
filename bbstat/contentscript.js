@@ -1,10 +1,11 @@
 
-
 var nameDict;
 var latinDict;
-var localDict; // local name-playerinfo dict
+var localDict; // local player-info dict, using key_mlbam as key
 var playerStats; // stores complete stats get from xhr response
 var playerSet; // store a hashset of players found (in concat ids)
+                // potentially used for quickly iterate over ids
+
 
 var api_host = "https://bbstat.nmkn.moe:2334";
 var fieldsPitching = ["Year", "Team", "Salary", "ERA", "FIP", "WHIP",
@@ -14,100 +15,7 @@ var fieldsBatting = ["Year", "Team", "Salary", "AVG", "OBP", "SLG", "WAR",
 
 var popupWidth = 240; // used in css injection and position calculation
 
-// need to run below as a call back
-var initialize = function() {
 
-    // The following variables are initialized once and 
-    //      changes persist through deactivation
-    latinDict = loadLatinDict();
-    playerStats = {}; 
-    localDict = {};
-    // The following is initialized in each activation 
-    playerSet = {};
-
-    // get tab states from background.js - activate immediately if needed
-    chrome.runtime.sendMessage({
-        type: "getStates",
-        tabid: -1 // use sender.tab.id in listener
-    }, function(response) {
-        console.log(response);
-        if (response.data.activated) {
-            activate();
-        }
-    });
-
-    chrome.runtime.onMessage.addListener(
-        function(message, sender, sendResponse) {
-            var msg = message.message;
-            var res_msg = "";
-            // console.log("Received Message: " + msg);
-            switch (msg) {
-                case "activate":
-                    activate();
-                    res_msg = "activated";
-                    // update states in background
-                    chrome.runtime.sendMessage({
-                        type: "setStates",
-                        tabid: -1,
-                        data: {activated: true}
-                    });
-                    break;
-                case "deactivate":
-                    deactivate();
-                    res_msg = "deactivated";
-                    chrome.runtime.sendMessage({
-                        type: "setStates",
-                        tabid: -1,
-                        data: {activated: false}
-                    });
-                    break;
-                case "getAll":
-                    requestAllPlayers(Object.keys(playerSet));
-                    res_msg = "all request sent";
-                    break;
-                default:
-                    console.log("Unknown message: " + msg);
-            }
-            sendResponse({
-                message: res_msg
-            });
-        }
-    );
-
-    // signaling that variable initialization is complete, main menu
-    //      in control panel can be displayed
-    //  This is sent to by popup
-    chrome.runtime.sendMessage({
-        type: "initComplete",
-    }); 
-    // This is sent to background
-    chrome.runtime.sendMessage({
-        type: "setStates",
-        tabid: -1,
-        data: {initialized: true}
-    });
-};
-
-var loadLatinDict = function() {
-    console.log("Loading Latin dict");
-    var latinDict = {
-        "á" : "a",
-        "é" : "e", 
-        "í" : "i", 
-        "ó" : "o", 
-        "ú" : "u", 
-        "ñ" : "n", 
-        "ü" : "u",
-        "Á" : "A",
-        "É" : "E",
-        "Í" : "I",
-        "Ñ" : "N",
-        "Ó" : "O",
-        "Ú" : "U",
-        "Ü" : "U"
-    }
-    return latinDict;
-};
 
 var toEnglish = function(word, dict) {
     var newword = ""
@@ -742,31 +650,3 @@ var insertCSS = function(){
 };
 
 $(document).ready(insertCSS);
-
-
-
-console.log("contentscript is being executed");
-
-// reset tab initialization status in background.js to false
-chrome.runtime.sendMessage({
-    type: "setStates",
-    tabid: -1,
-    data: {initialized: false}
-});
-
-// load dict and start initialization when complete
-var xhr = new XMLHttpRequest();
-var dictURL = chrome.runtime.getURL("data/people.json");
-
-xhr.onload = function() {
-    if (xhr.status === 200) {
-        console.log("name dictionary loaded - response status: %d",
-                xhr.status);
-        console.log("response length: %d", xhr.responseText.length);
-        nameDict = JSON.parse(xhr.responseText);
-        initialize();
-    }
-};
-
-xhr.open("GET", dictURL, true);
-xhr.send(null);
