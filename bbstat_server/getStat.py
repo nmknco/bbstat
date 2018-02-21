@@ -214,86 +214,86 @@ def extractData(page):
         data.append(datarow)
 
 
-    # filling missing salaries as estimates
-    # first iteration: skip all TOT years
-    low = 0
-    rowToFill = []
-    TOTYear = ""
-    for row in data:
-        skip = row["Year"] == TOTYear # we do not skip the TOT row itself, 
-                    # We need the estimate for TOT as a default 
-                    # in case salary cells in partial season rows are all 0
-        if row["Team"] == "TOT":
-            TOTYear = row["Year"]
-        salary = row.get("Salary", "")
-        if salary != "":
-            # add marker
-            row["Is_salary_estimate"] = 0
-            # $17,200,000 -> 17200000
-            salary = int("".join(salary[1:].split(",")))
-            row["Salary"] = salary
-            # skip partial season rows (but not the TOT row)
+    # # filling missing salaries as estimates (used in visualization project)
+    # # first iteration: skip all TOT years
+    # low = 0
+    # rowToFill = []
+    # TOTYear = ""
+    # for row in data:
+    #     skip = row["Year"] == TOTYear # we do not skip the TOT row itself, 
+    #                 # We need the estimate for TOT as a default 
+    #                 # in case salary cells in partial season rows are all 0
+    #     if row["Team"] == "TOT":
+    #         TOTYear = row["Year"]
+    #     salary = row.get("Salary", "")
+    #     if salary != "":
+    #         # add marker
+    #         row["Is_salary_estimate"] = 0
+    #         # $17,200,000 -> 17200000
+    #         salary = int("".join(salary[1:].split(",")))
+    #         row["Salary"] = salary
+    #         # skip partial season rows (but not the TOT row)
 
-            if skip: continue
-            # fill empty ones
-            for r in rowToFill:
-                r["Salary"] = round((low + salary) / 2)
-            rowToFill = []
-            low = salary
-        else:
-            row["Is_salary_estimate"] = 1
-            if skip: continue
-            rowToFill.append(row)
-    for r in rowToFill:
-        r["Salary"] = low
+    #         if skip: continue
+    #         # fill empty ones
+    #         for r in rowToFill:
+    #             r["Salary"] = round((low + salary) / 2)
+    #         rowToFill = []
+    #         low = salary
+    #     else:
+    #         row["Is_salary_estimate"] = 1
+    #         if skip: continue
+    #         rowToFill.append(row)
+    # for r in rowToFill:
+    #     r["Salary"] = low
 
-    # print([row["Salary"] for row in data])
+    # # print([row["Salary"] for row in data])
 
-    # second iteration: compute the total salary and war for TOT years
-    #   iterating in reverse order to compute sums
-    i = 0
-    currentYear = -1
-    warSum = 0.0
-    salarySum = 0
-    for row in reversed(data):
-        if row["Team"] != "TOT":
-            war = row.get("WAR", 0.0)
-            salary = row.get("Salary", 0)
-            if salary == "": salary = 0
-            if war == "": war = 0.0
-            war = float(war)
-            row["WAR"] = war
-            row["Salary"] = salary
-            if row["Year"] == currentYear:
-                warSum += war
-                salarySum += salary
-            else:
-                currentYear = row["Year"]
-                warSum = war
-                salarySum = salary
-        else:
-            row["WAR"] = float("%.1f" % warSum)
-            if salarySum > 0: row["Salary"] = salarySum # only use sum when it's not 0
-            warSum = 0.0
-            salarySum = 0
+    # # second iteration: compute the total salary and war for TOT years
+    # #   iterating in reverse order to compute sums
+    # i = 0
+    # currentYear = -1
+    # warSum = 0.0
+    # salarySum = 0
+    # for row in reversed(data):
+    #     if row["Team"] != "TOT":
+    #         war = row.get("WAR", 0.0)
+    #         salary = row.get("Salary", 0)
+    #         if salary == "": salary = 0
+    #         if war == "": war = 0.0
+    #         war = float(war)
+    #         row["WAR"] = war
+    #         row["Salary"] = salary
+    #         if row["Year"] == currentYear:
+    #             warSum += war
+    #             salarySum += salary
+    #         else:
+    #             currentYear = row["Year"]
+    #             warSum = war
+    #             salarySum = salary
+    #     else:
+    #         row["WAR"] = float("%.1f" % warSum)
+    #         if salarySum > 0: row["Salary"] = salarySum # only use sum when it's not 0
+    #         warSum = 0.0
+    #         salarySum = 0
 
-    # third iteration: estimate the salary for TOT partial years
-    totalGame = 0
-    totYear = -1
-    for row in data:
-        if row["Team"] == "TOT":
-            totalGame = int(row["G"])
-            totYear = row["Year"]
-            # get the total salary from te next row
-            totalSalary = row["Salary"]
-            if salary == -1:
-                totalSalary = row["Salary"]
-            else:
-                row["Salary"] = totalSalary
-                row["Is_salary_estimate"] = 0
-        elif row["Year"] == totYear:
-            row["Salary"] = round(totalSalary * int(row["G"]) / totalGame)
-            row["Is_salary_estimate"] = 1
+    # # third iteration: estimate the salary for TOT partial years
+    # totalGame = 0
+    # totYear = -1
+    # for row in data:
+    #     if row["Team"] == "TOT":
+    #         totalGame = int(row["G"])
+    #         totYear = row["Year"]
+    #         # get the total salary from te next row
+    #         totalSalary = row["Salary"]
+    #         if salary == -1:
+    #             totalSalary = row["Salary"]
+    #         else:
+    #             row["Salary"] = totalSalary
+    #             row["Is_salary_estimate"] = 0
+    #     elif row["Year"] == totYear:
+    #         row["Salary"] = round(totalSalary * int(row["G"]) / totalGame)
+    #         row["Is_salary_estimate"] = 1
 
 
 
@@ -314,13 +314,18 @@ def getTextByStat(trnode, stat_name):
 
 if __name__ == "__main__":
     key_bbref = sys.argv[1]
-    # test: force pull from baseball-reference
-    # print(getPage(key_bbref))
-    print(extractData(getPage(key_bbref)))
 
-    # collection = getCollectionFromDb()
-    # data = getData(key_bbref, collection)
-    # if data == 1:
-    #     print("{'error': 'cannot get data from baseball-reference'}")
-    # else:
-    #     print(data)
+    # test mode
+    if len(sys.argv) > 1:
+        # tests: force pull from baseball-reference
+        # print(getPage(key_bbref))
+        print(extractData(getPage(key_bbref)))
+
+    # production mode
+    else:
+        collection = getCollectionFromDb()
+        data = getData(key_bbref, collection)
+        if data == 1:
+            print("{'error': 'cannot get data from baseball-reference'}")
+        else:
+            print(data)
