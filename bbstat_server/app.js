@@ -20,9 +20,11 @@ var options = {
 };
 
 // serving images - express will search here first
+//      if image file is already stored, serve the stored image
+// To do: TTL
 app.use(express.static(path.join(__dirname, 'public')));
 
-// fall-through actions when image does not exist
+// fall-through actions when image does not exist - request from mlb.com
 app.get('/img/*', function(req, res) {
     // download and serve. Serve default when download fails
     key_mlbam = req.originalUrl.split('/').pop().slice(0,-4);
@@ -31,7 +33,7 @@ app.get('/img/*', function(req, res) {
 });
 
 // main data api
-app.get('/', function(req, res) {
+app.get('/api', function(req, res) {
     // note here res_app is the Response object in express
     //      which is a http.ServerResponse obj
     // REF: https://expressjs.com/en/4x/api.html#res

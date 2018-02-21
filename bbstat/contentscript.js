@@ -8,6 +8,7 @@ var playerSet; // store a hashset of players found (in concat ids)
 
 
 var api_host = "https://bbstat.nmkn.moe:2334";
+var api_path = "api"
 var fieldsPitching = ["Year", "Team", "Salary", "ERA", "FIP", "WHIP",
                         "IP", "G", "GS", "SO9", "BB9", "ERA+"];
 var fieldsBatting = ["Year", "Team", "Salary", "AVG", "OBP", "SLG", "WAR", 
@@ -447,7 +448,7 @@ var requestStats = function(key_bbref, dataHandler) {
     //  - dataHandler(stats) is the callback function processing the
     //  - received data [stats]
     var xhr = new XMLHttpRequest();
-    var api_url = api_host + "?key_bbref=" + key_bbref;
+    var api_url = api_host + '/' + api_path + "?key_bbref=" + key_bbref;
 
     xhr.onload = function() {
         if (xhr.status === 200) {
