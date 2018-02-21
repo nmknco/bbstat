@@ -51,19 +51,25 @@ def getPage(key_bbref):
             # print("Success!")
             return res.read().decode('utf8') 
         else:
-            # print("Failure: " + res.msg)
+            print("Failure: " + res.msg)
             return 1
     except (URLError,) as e:
+        print(e.code, e.msg)
         return 1
 
 def extractData(page):
     # extrat data in the form of [{}, {}, {}, ...], each item
     #   contains stats from one year
+    
     soup = BeautifulSoup(page, 'lxml')
+    
+    if soup.find(id = "all_batting_value") == None:
+        isBatting = False
+    elif soup.find(id = "all_pitching_value") == None:
+        isBatting = True
+    else:
+        isBatting = page.index("all_batting_value") < page.index("all_pitching_value")
 
-    tables = soup.select('#content > div')
-    table_standard = tables[0]
-    table_value = tables[1]
 
     keys1 = []
     keys2 = []
@@ -74,18 +80,18 @@ def extractData(page):
 
     position_kw = ""
 
-    if table_standard['id'] == 'all_batting_standard':
+    if isBatting:
 
         position_kw = "batting"
         # print("Position player")
         keys1 = ["age", "team_ID"]      
-        keys2 = ["batting_avg", "onbase_perc", "slugging_perc",
+        keys2 = ["batting_avg", "onbase_perc", "slugging_perc", "onbase_plus_slugging", # OPS is newly added
                     "G", "PA", "HR", "RBI", "SB", "BB", "SO", 
                     "onbase_plus_slugging_plus"
                 ]
         keys3 = ["WAR", "Salary"] 
         keys1_name = ["Age", "Team"]
-        keys2_name = ["AVG", "OBP", "SLG",
+        keys2_name = ["AVG", "OBP", "SLG", "OPS",
                         "G", "PA", "HR", "RBI", "SB", "BB", "SO",
                         "OPS+"]
         keys3_name = ["WAR", "Salary"]
@@ -110,10 +116,26 @@ def extractData(page):
     ## So it turns out that the batting_standard_alone table are somehow dynamically
     ## generated, and in the scraped page the year, age and team are in 
     ## the standard table...
-    rows_standard = table_standard.select('#%s_standard > tbody > tr' % position_kw)
-    rows_value_str = table_value.contents[-2]
-    rows_value = BeautifulSoup(rows_value_str, 'lxml'
-                    ).select('#%s_value > tbody > tr' % position_kw)
+
+    # tables = soup.select('#content > div')
+    # table_standard = tables[1]
+    # # print(table_standard)
+    # table_value = tables[1]
+
+    try:
+        rows_standard_wrapper = soup.find(id = "all_%s_standard" % position_kw).contents[-2]
+        # print(rows_standard_wrapper)
+        rows_standard = BeautifulSoup(rows_standard_wrapper, 'lxml').select('#%s_standard > tbody > tr' % position_kw)
+        # print(rows_standard)
+    except TypeError as e:
+        rows_standard_wrapper = soup.find(id = "all_%s_standard" % position_kw).contents[3]
+        # print(rows_standard_wrapper)
+        rows_standard = rows_standard_wrapper.select('#%s_standard > tbody > tr' % position_kw)
+
+
+    rows_value_wrapper = soup.find(id = "all_%s_value" % position_kw).contents[5]
+    rows_value = BeautifulSoup(rows_value_wrapper, 'lxml').select('#%s_value > tbody > tr' % position_kw)
+
     # value table only contains MLB-active years
     #   ALSO HAS "SPACER" ROWS. see /dimangjo01
 
@@ -127,24 +149,41 @@ def extractData(page):
         # print("%d %d" % (i, j))
         # known row classes:
         # - standard table: minors_table, nonroster_table, partial_table, full
+        #   - also has <spacer> class. See /darviyu01
         #       - partial seaons are "partial_table"
         #       - there's an extra TOT(AL) row for partial seasons, that is full
         # - value table: spacer, full
         #       - partial seasons are "full" in value table
         #       - spacer row is also "partial_table"...
         # we write TOT row in standard, but it's going to be incomplete because 
-        #   there is no corresponding role in value table
+        #   there is no corresponding row in value table
         rs = rows_standard[i]
         # print(rs['class'])
         # two cases to skip i: minors, non-play (injury/military-service)
         # if 'minors_table' in rs['class'] or 'nonroster_table' in rs['class']:
-        if 'full' not in rs['class'] and 'partial_table' not in rs['class']:
+        # Now use negative conditions for more robust coverage
+        #   - note that some injury role may have classes: spacer + partial_table
+        #       and we need to exclude them
+        # So the skip decision tree:
+        #   - not full? If not
+        #   - not partial_table? If not, skip
+        #   - If not full but is partial_table, is it spacer? If so, skip
+        #   - If not a spacer, then it is a partial season row and is retained
+        # !new 
+        #   - There is a further case: NL/AL TOT rows which is just like 
+        #       partial seasons (partial_table w/o spacer)
+        rsclass = rs['class']
+        if ('full' not in rsclass and 'partial_table' not in rsclass or
+                'spacer' in rsclass or 
+                getTextByStat(rs, "team_ID") == "TOT"
+                    # getTextByStat(rs, "lg_ID") != "MLB"): # this is gonna skip good NL/AL TOT rows
+                    and 'partial_table' in rsclass):
             i += 1
             continue 
 
         rv = rows_value[j]
         # print(rs['class'])
-        # one case to skip both j: spacer row in value table
+        # one case to skip j: spacer row in value table
         if 'spacer' in rv['class']:
             j += 1
             continue
@@ -166,7 +205,97 @@ def extractData(page):
                 # print(kn)
                 # print(data[kn])
             j += 1
+
+        # add a position identifier
+        datarow["Position"] =  "F" if isBatting else "P"
+
+        # print(datarow)
+
         data.append(datarow)
+
+
+    # filling missing salaries as estimates
+    # first iteration: skip all TOT years
+    low = 0
+    rowToFill = []
+    TOTYear = ""
+    for row in data:
+        skip = row["Year"] == TOTYear # we do not skip the TOT row itself, 
+                    # We need the estimate for TOT as a default 
+                    # in case salary cells in partial season rows are all 0
+        if row["Team"] == "TOT":
+            TOTYear = row["Year"]
+        salary = row.get("Salary", "")
+        if salary != "":
+            # add marker
+            row["Is_salary_estimate"] = 0
+            # $17,200,000 -> 17200000
+            salary = int("".join(salary[1:].split(",")))
+            row["Salary"] = salary
+            # skip partial season rows (but not the TOT row)
+
+            if skip: continue
+            # fill empty ones
+            for r in rowToFill:
+                r["Salary"] = round((low + salary) / 2)
+            rowToFill = []
+            low = salary
+        else:
+            row["Is_salary_estimate"] = 1
+            if skip: continue
+            rowToFill.append(row)
+    for r in rowToFill:
+        r["Salary"] = low
+
+    # print([row["Salary"] for row in data])
+
+    # second iteration: compute the total salary and war for TOT years
+    #   iterating in reverse order to compute sums
+    i = 0
+    currentYear = -1
+    warSum = 0.0
+    salarySum = 0
+    for row in reversed(data):
+        if row["Team"] != "TOT":
+            war = row.get("WAR", 0.0)
+            salary = row.get("Salary", 0)
+            if salary == "": salary = 0
+            if war == "": war = 0.0
+            war = float(war)
+            row["WAR"] = war
+            row["Salary"] = salary
+            if row["Year"] == currentYear:
+                warSum += war
+                salarySum += salary
+            else:
+                currentYear = row["Year"]
+                warSum = war
+                salarySum = salary
+        else:
+            row["WAR"] = float("%.1f" % warSum)
+            if salarySum > 0: row["Salary"] = salarySum # only use sum when it's not 0
+            warSum = 0.0
+            salarySum = 0
+
+    # third iteration: estimate the salary for TOT partial years
+    totalGame = 0
+    totYear = -1
+    for row in data:
+        if row["Team"] == "TOT":
+            totalGame = int(row["G"])
+            totYear = row["Year"]
+            # get the total salary from te next row
+            totalSalary = row["Salary"]
+            if salary == -1:
+                totalSalary = row["Salary"]
+            else:
+                row["Salary"] = totalSalary
+                row["Is_salary_estimate"] = 0
+        elif row["Year"] == totYear:
+            row["Salary"] = round(totalSalary * int(row["G"]) / totalGame)
+            row["Is_salary_estimate"] = 1
+
+
 
     return data
 
@@ -185,9 +314,13 @@ def getTextByStat(trnode, stat_name):
 
 if __name__ == "__main__":
     key_bbref = sys.argv[1]
-    collection = getCollectionFromDb()
-    data = getData(key_bbref, collection)
-    if data == 1:
-        print("{'error': 'cannot get data from baseball-reference'}")
-    else:
-        print(data)
+    # test: force pull from baseball-reference
+    # print(getPage(key_bbref))
+    print(extractData(getPage(key_bbref)))
+
+    # collection = getCollectionFromDb()
+    # data = getData(key_bbref, collection)
+    # if data == 1:
+    #     print("{'error': 'cannot get data from baseball-reference'}")
+    # else:
+    #     print(data)
