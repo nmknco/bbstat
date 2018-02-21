@@ -1,8 +1,8 @@
 {
     "manifest_version":2,
 
-    "name": "bbstat",
-    "description": "baseball stats enhancement",
+    "name": "BBSTAT: Easy Baseball Stats Everywhere",
+    "description": "Easy access of MLB player statistics from any page",
     "version":"0.1.2",
 
     "permissions": [
