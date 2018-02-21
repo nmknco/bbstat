@@ -3,7 +3,7 @@
 
     "name": "BBSTAT: Easy Baseball Stats Everywhere",
     "description": "Easy access of MLB player statistics from any page",
-    "version":"0.2.0",
+    "version":"0.2.1",
 
     "permissions": [
         "tabs",
@@ -22,6 +22,7 @@
             "css": ["content.css"],
             "js": [ 
                     "toggleDebug.js",
+                    "debug.js",
                     "jquery-3.2.1.js",
                     "contentscript.js",
                     "contentinit.js",
