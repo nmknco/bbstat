@@ -1,0 +1,12 @@
+.*/*
+*.zip
+*.crx
+*.pem
+
+bbstat/toggleDebug.js
+bbstat/test.html
+bbstat_server/keys/*
+bbstat_server/node_modules/*
+bbstat_server/public/img/*
+
+data_pre/*.csv
