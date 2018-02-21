@@ -15,9 +15,10 @@ var contentInit = {
             type: "getStates",
             tabid: -1 // use sender.tab.id in listener
         }, function(response) {
-            console.log(response);
+            // console.log(response);
             if (response.data.activated) {
                 activate();
+                contentChangeWatcher.watchForChange();
             }
         });
 
@@ -29,6 +30,7 @@ var contentInit = {
                 switch (msg) {
                     case "activate":
                         activate();
+                        contentChangeWatcher.watchForChange();
                         res_msg = "activated";
                         // update states in background
                         chrome.runtime.sendMessage({
@@ -39,6 +41,7 @@ var contentInit = {
                         break;
                     case "deactivate":
                         deactivate();
+                        contentChangeWatcher.cancelWatch();
                         res_msg = "deactivated";
                         chrome.runtime.sendMessage({
                             type: "setStates",
@@ -111,7 +114,7 @@ var contentInit = {
             "Ü" : "U"
         }
         return latinDict;
-    }
+    },
 
 }
 

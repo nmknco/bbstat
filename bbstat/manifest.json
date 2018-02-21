@@ -20,9 +20,12 @@
         {
             "matches": ["<all_urls>"],
             "css": ["content.css"],
-            "js": [ "jquery-3.2.1.js",
+            "js": [ 
+                    "jquery-3.2.1.js",
                     "contentscript.js",
-                    "contentinit.js"]
+                    "contentinit.js",
+                    "contentChangeWatcher.js"
+                  ]
         }
     ],
 
