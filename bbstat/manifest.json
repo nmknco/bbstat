@@ -3,7 +3,7 @@
 
     "name": "BBSTAT: Easy Baseball Stats Everywhere",
     "description": "Easy access of MLB player statistics from any page",
-    "version":"0.2.1",
+    "version":"0.2.2",
 
     "permissions": [
         "tabs",
