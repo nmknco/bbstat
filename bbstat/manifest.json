@@ -3,12 +3,13 @@
 
     "name": "BBSTAT: Easy Baseball Stats Everywhere",
     "description": "Easy access of MLB player statistics from any page",
-    "version":"0.2.2",
+    "version":"0.2.3",
 
     "permissions": [
         "tabs",
         "storage",
-        "http://locahost:2334/*"
+        "http://locahost:2334/*",
+        "https://bbstat.nmkn.moe:2334/*"
     ],
     
     "browser_action": {
